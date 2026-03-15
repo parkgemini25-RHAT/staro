@@ -1,8 +1,11 @@
 import { GoogleGenAI, Type, Schema, Modality } from "@google/genai";
 import { DrawnCard, ReadingResponse } from '../types';
 
+// Vite client env vars must use import.meta.env
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
 // Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey });
 
 // Define the strict JSON schema for the response
 const readingSchema: Schema = {
@@ -38,6 +41,10 @@ export const getTarotReading = async (
   readingTypeLabel: string = '기본 흐름'
 ): Promise<ReadingResponse> => {
   const model = "gemini-2.5-flash";
+
+  if (!apiKey) {
+    throw new Error('VITE_GEMINI_API_KEY is missing. Add it to your Vercel environment variables.');
+  }
 
   const cardDescriptions = cards.map(c => 
     `${c.position.toUpperCase()} Position: ${c.nameKo} (${c.isReversed ? 'Reverse/역방향' : 'Upright/정방향'})`
@@ -98,6 +105,10 @@ export const getTarotReading = async (
 // --- TTS Functionality ---
 
 export const getTarotSpeech = async (text: string): Promise<string> => {
+  if (!apiKey) {
+    throw new Error('VITE_GEMINI_API_KEY is missing. Add it to your Vercel environment variables.');
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
