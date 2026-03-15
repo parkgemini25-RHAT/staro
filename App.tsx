@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FULL_DECK } from './constants';
-import { DrawnCard, ReadingResponse, ReadingState } from './types';
+import { DrawnCard, ReadingResponse, ReadingState, SavedReading, ReadingPosition } from './types';
 import { getTarotReading, getTarotSpeech, decodeBase64, decodeAudioData } from './services/geminiService';
 import CardDisplay from './components/CardDisplay';
 
@@ -17,6 +17,42 @@ const EXAMPLE_QUESTIONS = [
   "이번 주말 소개팅 결과가 좋을까요?",
   "현재 겪고 있는 고민의 해결책이 있을까요?"
 ];
+
+const QUESTION_GUIDE_TIPS = [
+  '예/아니오 질문보다 흐름이나 방향을 묻는 질문이 더 선명해요.',
+  '상대 마음만 묻기보다 관계가 어떻게 흘러갈지를 물으면 해석이 더 좋아요.',
+  '시점을 넣으면 더 또렷해져요. 예: 이번 달, 올해 안, 다음 프로젝트.',
+  '막연한 불안보다 지금 내가 알아야 할 점을 묻는 질문이 더 실용적이에요.',
+];
+
+const READING_TYPES = {
+  flow: {
+    label: '기본 흐름',
+    badge: '4장',
+    positions: ['past', 'present', 'future', 'advice'] as ReadingPosition[],
+    stepLabels: ['과거', '현재', '미래', '조언'],
+    sectionTitles: ['과거 (Past)', '현재 (Present)', '미래 (Future)', '조언 (Advice)'],
+    description: '과거-현재-미래-조언으로 가장 안정적인 리딩이에요.',
+  },
+  decision: {
+    label: '의사결정',
+    badge: '4장',
+    positions: ['past', 'present', 'future', 'advice'] as ReadingPosition[],
+    stepLabels: ['배경', '선택지', '전개', '결론 조언'],
+    sectionTitles: ['배경 (Context)', '선택지 (Choice)', '전개 (Direction)', '결론 조언 (Advice)'],
+    description: '결정을 앞둔 상황을 배경-선택지-전개-조언 구조로 봐요.',
+  },
+  love: {
+    label: '관계/연애',
+    badge: '4장',
+    positions: ['past', 'present', 'future', 'advice'] as ReadingPosition[],
+    stepLabels: ['관계 배경', '현재 감정', '가까운 흐름', '관계 조언'],
+    sectionTitles: ['관계 배경', '현재 감정', '가까운 흐름', '관계 조언'],
+    description: '관계 흐름과 감정선을 더 읽기 쉽게 보는 방식이에요.',
+  },
+} as const;
+
+type ReadingTypeKey = keyof typeof READING_TYPES;
 
 // Custom animation styles
 const animationStyles = `
@@ -90,6 +126,42 @@ const animationStyles = `
 `;
 
 // Background Stars Component
+const wrapCanvasText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines: number = 3
+) => {
+  const words = text.split(' ');
+  let line = '';
+  let currentY = y;
+  let lines = 0;
+
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line.trim(), x, currentY);
+      line = words[n] + ' ';
+      currentY += lineHeight;
+      lines += 1;
+      if (lines >= maxLines - 1) {
+        const remaining = words.slice(n).join(' ');
+        const shortened = remaining.length > 38 ? `${remaining.slice(0, 38)}...` : remaining;
+        ctx.fillText(shortened, x, currentY);
+        return;
+      }
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line.trim(), x, currentY);
+};
+
 const BackgroundStars = () => {
   const stars = Array.from({ length: 50 }).map((_, i) => ({
     top: `${Math.random() * 100}%`,
@@ -123,12 +195,18 @@ const BackgroundStars = () => {
   );
 };
 
+const STORAGE_KEY = 'starot-reading-history';
+const MAX_SAVED_READINGS = 12;
+
 const App: React.FC = () => {
   const [question, setQuestion] = useState('');
+  const [selectedReadingType, setSelectedReadingType] = useState<ReadingTypeKey>('flow');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [questionGuideIndex, setQuestionGuideIndex] = useState(0);
   const [secretCards, setSecretCards] = useState<DrawnCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<DrawnCard[]>([]);
   const [reading, setReading] = useState<ReadingResponse | null>(null);
+  const [savedReadings, setSavedReadings] = useState<SavedReading[]>([]);
   const [state, setState] = useState<ReadingState>(ReadingState.IDLE);
   const [deckCards, setDeckCards] = useState<number[]>([]); 
   const [isShuffling, setIsShuffling] = useState(false);
@@ -216,6 +294,34 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQuestionGuideIndex((prev) => (prev + 1) % QUESTION_GUIDE_TIPS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as SavedReading[];
+      if (Array.isArray(parsed)) {
+        setSavedReadings(parsed);
+      }
+    } catch (error) {
+      console.error('Failed to load saved readings', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedReadings));
+    } catch (error) {
+      console.error('Failed to save reading history', error);
+    }
+  }, [savedReadings]);
+
   const initAudio = () => {
     if (!audioContext) {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -259,6 +365,69 @@ const App: React.FC = () => {
     }
   };
 
+  const saveCurrentReading = (currentQuestion: string, readingType: ReadingTypeKey, cards: DrawnCard[], result: ReadingResponse) => {
+    const nextItem: SavedReading = {
+      id: `${Date.now()}`,
+      question: currentQuestion,
+      readingType,
+      cards,
+      reading: result,
+      createdAt: new Date().toISOString(),
+    };
+
+    setSavedReadings(prev => [nextItem, ...prev].slice(0, MAX_SAVED_READINGS));
+  };
+
+  const loadSavedReading = (item: SavedReading) => {
+    stopAudio();
+    setQuestion(item.question);
+    setSelectedReadingType((item.readingType as ReadingTypeKey) || 'flow');
+    setSecretCards(item.cards);
+    setRevealedCards(item.cards);
+    setReading(item.reading);
+    setDeckCards([]);
+    setState(ReadingState.DRAWING);
+    setShowAudioModal(false);
+    setAudioBuffer(null);
+    pauseTimeRef.current = 0;
+    generateAudioBackground(item.reading);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const deleteSavedReading = (id: string) => {
+    setSavedReadings(prev => prev.filter(item => item.id !== id));
+  };
+
+  const refineQuestion = () => {
+    const trimmed = question.trim();
+    if (!trimmed) {
+      setQuestion('지금 제 상황에서 가장 먼저 점검해야 할 흐름은 무엇인가요?');
+      return;
+    }
+
+    let refined = trimmed;
+
+    if (!/[?.!]$/.test(refined)) {
+      refined = `${refined}?`;
+    }
+
+    const yesNoPatterns = ['좋을까요', '괜찮을까요', '될까요', '맞을까요', '가능할까요'];
+    const matched = yesNoPatterns.find(pattern => refined.includes(pattern));
+    if (matched) {
+      refined = refined.replace(matched, '어떤 흐름으로 전개될까요');
+    }
+
+    if (!refined.includes('지금') && !refined.includes('이번') && !refined.includes('올해') && !refined.includes('앞으로')) {
+      refined = `지금 ${refined.charAt(0).toLowerCase() + refined.slice(1)}`;
+    }
+
+    setQuestion(refined);
+  };
+
+  const fillQuestionExample = () => {
+    setQuestion(EXAMPLE_QUESTIONS[placeholderIndex]);
+  };
+
   const handleStart = () => {
     if (!question.trim()) {
       alert("질문을 입력해주세요.");
@@ -270,13 +439,13 @@ const App: React.FC = () => {
     setAudioBuffer(null);
     initAudio();
 
+    const config = READING_TYPES[selectedReadingType];
     const shuffled = [...FULL_DECK].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 4);
-    const positions: ('past' | 'present' | 'future' | 'advice')[] = ['past', 'present', 'future', 'advice'];
+    const selected = shuffled.slice(0, config.positions.length);
     const finalCards: DrawnCard[] = selected.map((card, index) => ({
       ...card,
       isReversed: Math.random() < 0.3, 
-      position: positions[index]
+      position: config.positions[index]
     }));
 
     setSecretCards(finalCards);
@@ -289,8 +458,9 @@ const App: React.FC = () => {
 
   const generateReadingBackground = async (q: string, cards: DrawnCard[]) => {
     try {
-      const result = await getTarotReading(q, cards);
+      const result = await getTarotReading(q, cards, currentReadingConfig.label);
       setReading(result);
+      saveCurrentReading(q, selectedReadingType, cards, result);
       generateAudioBackground(result);
     } catch (error) {
       console.error(error);
@@ -354,11 +524,14 @@ const App: React.FC = () => {
     }
   };
 
-  const showResults = revealedCards.length === 4 && reading !== null;
+  const targetCardCount = secretCards.length || READING_TYPES[selectedReadingType].positions.length;
+  const showResults = revealedCards.length === targetCardCount && reading !== null;
   const isSelectingPhase = state === ReadingState.DRAWING && !showResults;
+  const currentReadingConfig = READING_TYPES[selectedReadingType];
   const isIdle = state === ReadingState.IDLE;
 
   const [showAudioModal, setShowAudioModal] = useState(false);
+  const [isExportingShareCard, setIsExportingShareCard] = useState(false);
   useEffect(() => {
     if (showResults && audioBuffer && !isAudioLoading && !isPlaying && !isPaused && !showAudioModal) {
         const timer = setTimeout(() => setShowAudioModal(true), 1500);
@@ -368,15 +541,11 @@ const App: React.FC = () => {
 
   const renderInstructionText = () => {
     const count = revealedCards.length;
-    let keyword = "";
-    let colorClass = "";
-    switch (count) {
-      case 0: keyword = "과거"; colorClass = "text-yellow-300"; break;
-      case 1: keyword = "현재"; colorClass = "text-blue-300"; break;
-      case 2: keyword = "미래"; colorClass = "text-purple-300"; break;
-      case 3: keyword = "조언"; colorClass = "text-pink-300"; break;
-      default: return null;
-    }
+    const stepLabels = READING_TYPES[selectedReadingType].stepLabels;
+    const keyword = stepLabels[count];
+    if (!keyword) return null;
+    const colorClasses = ['text-yellow-300', 'text-blue-300', 'text-purple-300', 'text-pink-300'];
+    const colorClass = colorClasses[count] || 'text-white';
     return (
       <span className="flex items-center gap-2">
         <span className={`font-bold text-2xl md:text-3xl ${colorClass} drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] animate-pulse`}>
@@ -385,6 +554,117 @@ const App: React.FC = () => {
         <span className="text-white opacity-100 font-medium text-lg md:text-xl drop-shadow-md">흐름을 짚어볼 카드를 선택하세요</span>
       </span>
     );
+  };
+
+  const downloadShareCard = async () => {
+    if (!reading || revealedCards.length === 0) return;
+
+    try {
+      setIsExportingShareCard(true);
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1350;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context unavailable');
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#120c2f');
+      gradient.addColorStop(0.55, '#2a1458');
+      gradient.addColorStop(1, '#0f172a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < 80; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const radius = Math.random() * 2.2;
+        ctx.fillStyle = `rgba(255,255,255,${0.15 + Math.random() * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(60, 60, canvas.width - 120, canvas.height - 120);
+
+      ctx.strokeStyle = 'rgba(216,180,254,0.35)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
+
+      ctx.fillStyle = '#fde68a';
+      ctx.font = 'bold 34px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Starot Reading Card', canvas.width / 2, 150);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 52px sans-serif';
+      ctx.fillText('오늘의 리딩', canvas.width / 2, 220);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.78)';
+      ctx.font = '28px sans-serif';
+      const questionText = question.length > 32 ? `${question.slice(0, 32)}...` : question;
+      ctx.fillText(questionText, canvas.width / 2, 290);
+
+      const cardBoxWidth = 210;
+      const cardBoxHeight = 140;
+      const gap = 20;
+      const startX = (canvas.width - (2 * cardBoxWidth + gap)) / 2;
+      const startY = 360;
+
+      revealedCards.slice(0, 4).forEach((card, index) => {
+        const row = Math.floor(index / 2);
+        const col = index % 2;
+        const x = startX + col * (cardBoxWidth + gap);
+        const y = startY + row * (cardBoxHeight + gap);
+
+        ctx.fillStyle = 'rgba(15,23,42,0.55)';
+        ctx.fillRect(x, y, cardBoxWidth, cardBoxHeight);
+        ctx.strokeStyle = 'rgba(192,132,252,0.45)';
+        ctx.strokeRect(x, y, cardBoxWidth, cardBoxHeight);
+
+        ctx.fillStyle = '#c4b5fd';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(currentReadingConfig.stepLabels[index] || card.position, x + 16, y + 30);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px sans-serif';
+        const cardTitle = card.nameKo.length > 12 ? `${card.nameKo.slice(0, 12)}...` : card.nameKo;
+        ctx.fillText(cardTitle, x + 16, y + 68);
+
+        ctx.fillStyle = card.isReversed ? '#fca5a5' : '#86efac';
+        ctx.font = '18px sans-serif';
+        ctx.fillText(card.isReversed ? '역방향' : '정방향', x + 16, y + 104);
+      });
+
+      ctx.fillStyle = '#fde68a';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('한 줄 조언', 120, 735);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.font = 'bold 42px sans-serif';
+      wrapCanvasText(ctx, `“${reading.oneLineAdvice}”`, 120, 790, canvas.width - 240, 58);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = '26px sans-serif';
+      wrapCanvasText(ctx, reading.summary, 120, 980, canvas.width - 240, 42, 5);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Generated by Starot', canvas.width / 2, 1260);
+
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `starot-reading-${Date.now()}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Failed to export share card', error);
+      alert('공유 카드 생성에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      setIsExportingShareCard(false);
+    }
   };
 
   return (
@@ -412,7 +692,7 @@ const App: React.FC = () => {
           </h1>
         </header>
         {isIdle && (
-          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-lg animate-fade-in-up relative mt-[-2rem]" style={{ animationDelay: '0.2s' }}>
+          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-5xl animate-fade-in-up relative mt-[-2rem]" style={{ animationDelay: '0.2s' }}>
             <div className="relative w-full aspect-[3/4] max-w-md mx-auto z-0 mb-32">
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[120%] bg-purple-900/30 blur-[80px] rounded-full"></div>
                <div className="w-full h-full relative z-10">
@@ -421,12 +701,38 @@ const App: React.FC = () => {
                 
                 {/* Input Layer (Moved Down) */}
                 <div className="absolute bottom-16 left-0 right-0 z-30 px-6">
+                  <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+                    {(Object.entries(READING_TYPES) as [ReadingTypeKey, typeof READING_TYPES[ReadingTypeKey]][]).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedReadingType(key)}
+                        className={`px-4 py-2 rounded-full border text-xs md:text-sm transition-all ${selectedReadingType === key ? 'bg-purple-600/70 border-purple-300 text-white shadow-[0_0_20px_rgba(168,85,247,0.35)]' : 'bg-slate-900/40 border-white/15 text-purple-100/70 hover:text-white hover:border-purple-300/40'}`}
+                      >
+                        <span className="font-semibold">{config.label}</span>
+                        <span className="ml-2 text-[11px] opacity-80">{config.badge}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-center text-xs text-purple-100/65 mb-3 px-4">{READING_TYPES[selectedReadingType].description}</p>
+                  <div className="text-center mb-4 px-4">
+                    <p className="text-[11px] md:text-xs text-yellow-100/80 bg-black/20 border border-white/10 rounded-full px-4 py-2 inline-block animate-placeholder">
+                      질문 팁 · {QUESTION_GUIDE_TIPS[questionGuideIndex]}
+                    </p>
+                  </div>
                   <div className="relative group max-w-xs mx-auto transform transition-transform duration-500 hover:scale-105">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-500 to-indigo-500 rounded-full blur opacity-40 group-hover:opacity-80 transition duration-500"></div>
                     <div className="relative bg-slate-900/40 backdrop-blur-md rounded-full border border-white/20 shadow-2xl">
                         <input type="text" value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full bg-transparent text-white px-8 py-3 text-center text-sm md:text-base focus:outline-none placeholder-transparent font-medium drop-shadow-md font-sans" onKeyDown={(e) => e.key === 'Enter' && handleStart()} />
                         {!question && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span key={placeholderIndex} className="text-purple-100/70 animate-placeholder text-xs md:text-sm font-light tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{EXAMPLE_QUESTIONS[placeholderIndex]}</span></div>}
                     </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+                    <button onClick={fillQuestionExample} className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs md:text-sm border border-white/10 transition-colors">
+                      예시 질문 넣기
+                    </button>
+                    <button onClick={refineQuestion} className="px-4 py-2 rounded-full bg-purple-600/80 hover:bg-purple-500 text-white text-xs md:text-sm border border-purple-300/30 transition-colors shadow-[0_0_16px_rgba(168,85,247,0.25)]">
+                      질문 다듬기
+                    </button>
                   </div>
                 </div>
 
@@ -445,9 +751,40 @@ const App: React.FC = () => {
                   </div>
                </div>
             </div>
+
+            {savedReadings.length > 0 && (
+              <div className="w-full max-w-3xl mt-8 px-4 md:px-0 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-[0_0_30px_rgba(76,29,149,0.25)] p-5 md:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-purple-300 text-xs tracking-[0.25em] uppercase font-bold">Reading History</p>
+                      <h3 className="text-white text-xl md:text-2xl font-display mt-1">최근 저장된 리딩</h3>
+                    </div>
+                    <span className="text-xs text-purple-200/70">최대 {MAX_SAVED_READINGS}개</span>
+                  </div>
+                  <div className="space-y-3">
+                    {savedReadings.slice(0, 4).map((item) => (
+                      <div key={item.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/[0.07] transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-white font-medium leading-relaxed truncate">{item.question}</p>
+                            <p className="text-xs text-purple-200/60 mt-1">{new Date(item.createdAt).toLocaleString('ko-KR')} · {READING_TYPES[(item.readingType as ReadingTypeKey) || 'flow']?.label || '기본 흐름'}</p>
+                            <p className="text-sm text-gray-300 mt-2 line-clamp-2">{item.reading.oneLineAdvice}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => loadSavedReading(item)} className="px-3 py-2 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white text-sm font-semibold transition-colors">다시 보기</button>
+                            <button onClick={() => deleteSavedReading(item.id)} className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-sm transition-colors">삭제</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
-        {isSelectingPhase && revealedCards.length < 4 && (
+        {isSelectingPhase && revealedCards.length < targetCardCount && (
           <div className="flex flex-col items-center animate-fade-in-up w-full flex-1 justify-center z-20 relative">
             {isShuffling && <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"><div className="bg-black/60 backdrop-blur-md px-8 py-4 rounded-full border border-purple-500/50 shadow-[0_0_40px_rgba(168,85,247,0.6)] animate-pulse"><span className="text-white font-display font-bold tracking-widest text-xl md:text-2xl drop-shadow-lg">🔮 셔플 중...</span></div></div>}
             {/* Fixed Text Visibility: Removed text-transparent and bg-clip-text */}
@@ -476,21 +813,21 @@ const App: React.FC = () => {
                   const card = revealedCards[index];
                   return (
                     <div key={index} className="flex flex-col items-center">
-                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border-2 border-dashed border-purple-500/20 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'animate-pulse border-purple-400/50 shadow-[0_0_20px_rgba(168,85,247,0.15)]' : ''}`}><span className="text-purple-400/50 text-sm font-bold tracking-widest">{['과거', '현재', '미래', '조언'][index]}</span></div> : <CardDisplay card={card} delay={index * 200} />}
+                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border-2 border-dashed border-purple-500/20 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'animate-pulse border-purple-400/50 shadow-[0_0_20px_rgba(168,85,247,0.15)]' : ''}`}><span className="text-purple-400/50 text-sm font-bold tracking-widest">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={index * 200} />}
                     </div>
                   );
                })}
              </div>
-             {revealedCards.length === 4 && !showResults && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-purple-200 font-display text-lg">별들이 당신의 운명을 속삭이고 있습니다...</p></div>}
+             {revealedCards.length === targetCardCount && !showResults && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-purple-200 font-display text-lg">별들이 당신의 운명을 속삭이고 있습니다...</p></div>}
              {showResults && reading && (
                 <div className="w-full max-w-4xl bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 md:p-10 border border-purple-500/30 shadow-[0_0_50px_rgba(76,29,149,0.3)] animate-fade-in-up mb-20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
                   <div className="text-center mb-10"><span className="text-purple-400 text-xs font-bold tracking-widest uppercase mb-2 block">Your Question</span><h2 className="text-2xl md:text-3xl text-white font-display leading-tight">"{question}"</h2></div>
                   <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 mb-12">
-                    <Section title="과거 (Past)" readingContent={reading.pastReading} cardMeaning={reading.pastCardMeaning} />
-                    <Section title="현재 (Present)" readingContent={reading.presentReading} cardMeaning={reading.presentCardMeaning} />
-                    <Section title="미래 (Future)" readingContent={reading.futureReading} cardMeaning={reading.futureCardMeaning} />
-                    <Section title="조언 (Advice)" readingContent={reading.adviceReading} cardMeaning={reading.adviceCardMeaning} />
+                    <Section title={currentReadingConfig.sectionTitles[0]} readingContent={reading.pastReading} cardMeaning={reading.pastCardMeaning} />
+                    <Section title={currentReadingConfig.sectionTitles[1]} readingContent={reading.presentReading} cardMeaning={reading.presentCardMeaning} />
+                    <Section title={currentReadingConfig.sectionTitles[2]} readingContent={reading.futureReading} cardMeaning={reading.futureCardMeaning} />
+                    <Section title={currentReadingConfig.sectionTitles[3]} readingContent={reading.adviceReading} cardMeaning={reading.adviceCardMeaning} />
                   </div>
                   <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 rounded-2xl p-6 md:p-8 border border-white/10 relative">
                     <h3 className="text-xl font-bold text-yellow-200 mb-4 flex items-center gap-2"><span>✨</span> 종합 해석</h3>
@@ -498,6 +835,10 @@ const App: React.FC = () => {
                     <div className="bg-black/20 rounded-xl p-4 border-l-4 border-yellow-400"><p className="text-lg font-medium text-white italic">"{reading.oneLineAdvice}"</p></div>
                     <div className="mt-8 flex justify-end items-center gap-4 flex-wrap border-t border-white/10 pt-4">
                       {isAudioLoading && <span className="text-sm text-purple-300 animate-pulse">신비로운 목소리를 준비 중...</span>}
+                      <button onClick={downloadShareCard} disabled={isExportingShareCard} className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-bold transition-all shadow-lg disabled:opacity-60 disabled:cursor-wait">
+                        <span>✨</span>
+                        {isExportingShareCard ? '공유 카드 생성 중...' : '공유 카드 저장'}
+                      </button>
                       {audioBuffer && (
                         <>
                           {!isPlaying ? (

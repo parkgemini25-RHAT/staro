@@ -7,9 +7,11 @@ export interface TarotCard {
   number?: number | string;
 }
 
+export type ReadingPosition = 'past' | 'present' | 'future' | 'advice' | 'situation' | 'challenge' | 'outcome';
+
 export interface DrawnCard extends TarotCard {
   isReversed: boolean;
-  position: 'past' | 'present' | 'future' | 'advice';
+  position: ReadingPosition;
 }
 
 export interface ReadingResponse {
@@ -27,6 +29,15 @@ export interface ReadingResponse {
 
   summary: string;
   oneLineAdvice: string;
+}
+
+export interface SavedReading {
+  id: string;
+  question: string;
+  readingType: string;
+  cards: DrawnCard[];
+  reading: ReadingResponse;
+  createdAt: string;
 }
 
 export enum ReadingState {

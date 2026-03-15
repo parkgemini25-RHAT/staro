@@ -34,7 +34,8 @@ const readingSchema: Schema = {
 
 export const getTarotReading = async (
   question: string,
-  cards: DrawnCard[]
+  cards: DrawnCard[],
+  readingTypeLabel: string = '기본 흐름'
 ): Promise<ReadingResponse> => {
   const model = "gemini-2.5-flash";
 
@@ -46,10 +47,12 @@ export const getTarotReading = async (
     You are an expert Tarot Reader. 
     User Question: "${question}"
     
-    The user has drawn the following 4 cards:
+    Reading mode: ${readingTypeLabel}
+
+    The user has drawn the following cards:
     ${cardDescriptions}
 
-    Please interpret these cards in Korean based on the question.
+    Please interpret these cards in Korean based on the question and the reading mode.
     
     IMPORTANT INSTRUCTION:
     You must separate the "Contextual Reading" (Answer to the question) from the "Card Meaning" (Definition).
