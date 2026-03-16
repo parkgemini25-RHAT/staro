@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FULL_DECK } from './constants';
 import { DrawnCard, ReadingResponse, ReadingState, SavedReading, ReadingPosition } from './types';
-import { getTarotReading, getTarotSpeech, decodeBase64, decodeAudioData } from './services/geminiService';
+import { getTarotReading } from './services/geminiService';
 import CardDisplay from './components/CardDisplay';
 
 // Example questions to rotate
@@ -211,16 +211,6 @@ const App: React.FC = () => {
   const [deckCards, setDeckCards] = useState<number[]>([]); 
   const [isShuffling, setIsShuffling] = useState(false);
 
-  // Audio State
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const activeSource = useRef<AudioBufferSourceNode | null>(null);
-  const [isAudioLoading, setIsAudioLoading] = useState(false);
-  const startTimeRef = useRef<number>(0);
-  const pauseTimeRef = useRef<number>(0);
-
   // Mute State
   const [isMuted, setIsMuted] = useState(false);
 
@@ -322,49 +312,6 @@ const App: React.FC = () => {
     }
   }, [savedReadings]);
 
-  const initAudio = () => {
-    if (!audioContext) {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      setAudioContext(ctx);
-      return ctx;
-    }
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-    return audioContext;
-  };
-
-  const stopAudio = () => {
-    if (activeSource.current) {
-      try { activeSource.current.stop(); } catch (e) { /* ignore */ }
-      activeSource.current = null;
-    }
-    setIsPlaying(false);
-    setIsPaused(false);
-    pauseTimeRef.current = 0;
-  };
-
-  const pauseAudio = () => {
-    if (activeSource.current && isPlaying) {
-      try {
-        activeSource.current.stop();
-        if (audioContext) {
-          pauseTimeRef.current += audioContext.currentTime - startTimeRef.current;
-        }
-      } catch (e) { /* ignore */ }
-      setIsPlaying(false);
-      setIsPaused(true);
-      activeSource.current = null;
-    }
-  };
-
-  const resumeAudio = () => {
-    if (audioBuffer && audioContext && isPaused) {
-      playAudioBuffer(audioBuffer, audioContext, pauseTimeRef.current);
-      setIsPaused(false);
-    }
-  };
-
   const saveCurrentReading = (currentQuestion: string, readingType: ReadingTypeKey, cards: DrawnCard[], result: ReadingResponse) => {
     const nextItem: SavedReading = {
       id: `${Date.now()}`,
@@ -379,7 +326,6 @@ const App: React.FC = () => {
   };
 
   const loadSavedReading = (item: SavedReading) => {
-    stopAudio();
     setQuestion(item.question);
     setSelectedReadingType((item.readingType as ReadingTypeKey) || 'flow');
     setSecretCards(item.cards);
@@ -387,10 +333,6 @@ const App: React.FC = () => {
     setReading(item.reading);
     setDeckCards([]);
     setState(ReadingState.DRAWING);
-    setShowAudioModal(false);
-    setAudioBuffer(null);
-    pauseTimeRef.current = 0;
-    generateAudioBackground(item.reading);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -435,9 +377,6 @@ const App: React.FC = () => {
     }
     playSfx('start');
     playBgm();
-    stopAudio();
-    setAudioBuffer(null);
-    initAudio();
 
     const config = READING_TYPES[selectedReadingType];
     const shuffled = [...FULL_DECK].sort(() => 0.5 - Math.random());
@@ -461,26 +400,9 @@ const App: React.FC = () => {
       const result = await getTarotReading(q, cards, currentReadingConfig.label);
       setReading(result);
       saveCurrentReading(q, selectedReadingType, cards, result);
-      generateAudioBackground(result);
     } catch (error) {
       console.error(error);
       setState(ReadingState.ERROR);
-    }
-  };
-
-  const generateAudioBackground = async (result: ReadingResponse) => {
-    setIsAudioLoading(true);
-    const textToRead = `종합 해석입니다. ${result.summary} 조언을 드리자면. ${result.oneLineAdvice}`;
-    try {
-      const base64Audio = await getTarotSpeech(textToRead);
-      const ctx = initAudio();
-      const bytes = decodeBase64(base64Audio);
-      const buffer = await decodeAudioData(bytes, ctx, 24000, 1);
-      setAudioBuffer(buffer);
-    } catch (error) {
-      console.error("Audio generation failed", error);
-    } finally {
-      setIsAudioLoading(false);
     }
   };
 
@@ -499,45 +421,13 @@ const App: React.FC = () => {
     }, 600); 
   };
 
-  const playAudioBuffer = (buffer: AudioBuffer | null, ctx: AudioContext | null, offset: number = 0) => {
-    if (!buffer || !ctx) return;
-    if (activeSource.current) {
-      try { activeSource.current.stop(); } catch(e){}
-    }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.onended = () => { setIsPlaying(false); };
-    activeSource.current = source;
-    startTimeRef.current = ctx.currentTime - offset;
-    source.start(0, offset);
-    setIsPlaying(true);
-  };
-
-  const handlePlayOrResume = () => {
-    if (isPlaying) return;
-    if (isPaused && audioBuffer) {
-      resumeAudio();
-    } else {
-      const ctx = initAudio();
-      playAudioBuffer(audioBuffer, ctx, 0);
-    }
-  };
-
   const targetCardCount = secretCards.length || READING_TYPES[selectedReadingType].positions.length;
   const showResults = revealedCards.length === targetCardCount && reading !== null;
   const isSelectingPhase = state === ReadingState.DRAWING && !showResults;
   const currentReadingConfig = READING_TYPES[selectedReadingType];
   const isIdle = state === ReadingState.IDLE;
 
-  const [showAudioModal, setShowAudioModal] = useState(false);
   const [isExportingShareCard, setIsExportingShareCard] = useState(false);
-  useEffect(() => {
-    if (showResults && audioBuffer && !isAudioLoading && !isPlaying && !isPaused && !showAudioModal) {
-        const timer = setTimeout(() => setShowAudioModal(true), 1500);
-        return () => clearTimeout(timer);
-    }
-  }, [showResults, audioBuffer, isAudioLoading]);
 
   const renderInstructionText = () => {
     const count = revealedCards.length;
@@ -834,40 +724,19 @@ const App: React.FC = () => {
                     <p className="text-gray-100 leading-relaxed mb-6 whitespace-pre-line text-lg font-light">{reading.summary}</p>
                     <div className="bg-black/20 rounded-xl p-4 border-l-4 border-yellow-400"><p className="text-lg font-medium text-white italic">"{reading.oneLineAdvice}"</p></div>
                     <div className="mt-8 flex justify-end items-center gap-4 flex-wrap border-t border-white/10 pt-4">
-                      {isAudioLoading && <span className="text-sm text-purple-300 animate-pulse">신비로운 목소리를 준비 중...</span>}
                       <button onClick={downloadShareCard} disabled={isExportingShareCard} className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-bold transition-all shadow-lg disabled:opacity-60 disabled:cursor-wait">
                         <span>✨</span>
                         {isExportingShareCard ? '공유 카드 생성 중...' : '공유 카드 저장'}
                       </button>
-                      {audioBuffer && (
-                        <>
-                          {!isPlaying ? (
-                            <button onClick={handlePlayOrResume} className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold transition-all shadow-lg hover:shadow-purple-500/40 transform hover:-translate-y-0.5"><span className="text-xl">🔊</span> {isPaused ? '이어 듣기' : '목소리로 듣기'}</button>
-                          ) : (
-                            <button onClick={pauseAudio} className="flex items-center gap-2 px-6 py-3 rounded-full bg-slate-700 hover:bg-slate-600 text-white font-bold transition-all shadow-lg border border-white/10"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>일시정지</button>
-                          )}
-                          {(isPlaying || isPaused) && <button onClick={stopAudio} className="text-gray-400 hover:text-white text-sm font-medium transition-colors px-2">그만 듣기</button>}
-                        </>
-                      )}
                     </div>
                   </div>
-                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); setState(ReadingState.IDLE); stopAudio(); }} className="text-purple-300 hover:text-white transition-colors border-b border-purple-500/30 hover:border-purple-300 pb-1 text-sm uppercase tracking-widest">다른 질문 하기</button></div>
+                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); setState(ReadingState.IDLE); }} className="text-purple-300 hover:text-white transition-colors border-b border-purple-500/30 hover:border-purple-300 pb-1 text-sm uppercase tracking-widest">다른 질문 하기</button></div>
                 </div>
              )}
           </div>
         )}
         {state === ReadingState.ERROR && <div className="text-center text-red-300 bg-red-900/20 p-6 rounded-xl mt-8 border border-red-500/30 backdrop-blur-md"><p>별들의 신호를 수신하는데 실패했습니다.</p><button onClick={() => setState(ReadingState.IDLE)} className="mt-4 text-sm underline">다시 시도하기</button></div>}
       </div>
-      {showAudioModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in-up">
-            <div className="bg-[#1a103c] border border-purple-500/30 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(139,92,246,0.3)] text-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 to-transparent pointer-events-none"></div>
-                <h3 className="text-2xl font-display text-yellow-200 mb-4 relative z-10">운명의 목소리</h3>
-                <p className="text-gray-300 mb-8 relative z-10 leading-relaxed">AI가 해석한 당신의 운명을<br/>신비로운 목소리로 들려드릴까요?</p>
-                <div className="flex justify-center gap-4 relative z-10"><button onClick={() => setShowAudioModal(false)} className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 font-medium transition-colors">아니오</button><button onClick={() => { setShowAudioModal(false); handlePlayOrResume(); }} className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold shadow-lg transition-transform transform hover:scale-105">네, 들을래요</button></div>
-            </div>
-        </div>
-      )}
     </div>
   );
 };
