@@ -3,6 +3,7 @@ import { FULL_DECK } from './constants';
 import { DrawnCard, ReadingResponse, ReadingState, SavedReading, ReadingPosition } from './types';
 import { getTarotReading } from './services/geminiService';
 import CardDisplay from './components/CardDisplay';
+import LandingScreen from './components/LandingScreen';
 
 // Example questions to rotate
 const EXAMPLE_QUESTIONS = [
@@ -573,106 +574,19 @@ const App: React.FC = () => {
         )}
       </button>
       <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center min-h-screen p-4 md:p-8">
-        <header className={`transition-all duration-700 z-50 ${isIdle ? 'mt-8 mb-4' : 'mt-4 mb-4 scale-90'}`}>
-           <div className="bg-purple-600/30 backdrop-blur-md border border-purple-400/30 rounded-full px-6 py-1 shadow-lg inline-block mb-3 animate-fade-in-up mx-auto block w-fit">
-             <p className="text-yellow-200 font-bold text-xs md:text-sm tracking-widest drop-shadow-md text-center">별처럼 빛나는 당신의 미래를 위한</p>
-          </div>
-          <h1 className="font-display text-4xl md:text-6xl text-white font-extrabold text-center tracking-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-             <span className="bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-yellow-100 to-white drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)]">Starot</span>
-          </h1>
-        </header>
-        {isIdle && (
-          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-5xl animate-fade-in-up relative mt-[-2rem]" style={{ animationDelay: '0.2s' }}>
-            <div className="relative w-full aspect-[3/4] max-w-md mx-auto z-0 mb-32">
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[120%] bg-purple-900/30 blur-[80px] rounded-full"></div>
-               <div className="w-full h-full relative z-10">
-                  <img src="https://t3.ftcdn.net/jpg/15/95/33/70/360_F_1595337051_LmxrBVt0mw106obPtaBdKyFMYbXEh4k1.jpg" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1572916124578-8314120df0f8?q=80&w=1000&auto=format&fit=crop"; }} alt="Mystic Fortune Teller" className="w-full h-full object-cover rounded-t-[5rem] rounded-b-[8rem] opacity-90 shadow-[0_20px_60px_rgba(0,0,0,0.6)]" style={{ maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)' }} />
-               </div>
-                
-                {/* Input Layer (Moved Down) */}
-                <div className="absolute bottom-16 left-0 right-0 z-30 px-6">
-                  <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
-                    {(Object.entries(READING_TYPES) as [ReadingTypeKey, typeof READING_TYPES[ReadingTypeKey]][]).map(([key, config]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedReadingType(key)}
-                        className={`px-4 py-2 rounded-full border text-xs md:text-sm transition-all ${selectedReadingType === key ? 'bg-purple-600/70 border-purple-300 text-white shadow-[0_0_20px_rgba(168,85,247,0.35)]' : 'bg-slate-900/40 border-white/15 text-purple-100/70 hover:text-white hover:border-purple-300/40'}`}
-                      >
-                        <span className="font-semibold">{config.label}</span>
-                        <span className="ml-2 text-[11px] opacity-80">{config.badge}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-center text-xs text-purple-100/65 mb-3 px-4">{READING_TYPES[selectedReadingType].description}</p>
-                  <div className="text-center mb-4 px-4">
-                    <p className="text-[11px] md:text-xs text-yellow-100/80 bg-black/20 border border-white/10 rounded-full px-4 py-2 inline-block animate-placeholder">
-                      질문 팁 · {QUESTION_GUIDE_TIPS[questionGuideIndex]}
-                    </p>
-                  </div>
-                  <div className="relative group max-w-xs mx-auto transform transition-transform duration-500 hover:scale-105">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-500 to-indigo-500 rounded-full blur opacity-40 group-hover:opacity-80 transition duration-500"></div>
-                    <div className="relative bg-slate-900/40 backdrop-blur-md rounded-full border border-white/20 shadow-2xl">
-                        <input type="text" value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full bg-transparent text-white px-8 py-3 text-center text-sm md:text-base focus:outline-none placeholder-transparent font-medium drop-shadow-md font-sans" onKeyDown={(e) => e.key === 'Enter' && handleStart()} />
-                        {!question && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span key={placeholderIndex} className="text-purple-100/70 animate-placeholder text-xs md:text-sm font-light tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{EXAMPLE_QUESTIONS[placeholderIndex]}</span></div>}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
-                    <button onClick={fillQuestionExample} className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs md:text-sm border border-white/10 transition-colors">
-                      예시 질문 넣기
-                    </button>
-                    <button onClick={refineQuestion} className="px-4 py-2 rounded-full bg-purple-600/80 hover:bg-purple-500 text-white text-xs md:text-sm border border-purple-300/30 transition-colors shadow-[0_0_16px_rgba(168,85,247,0.25)]">
-                      질문 다듬기
-                    </button>
-                  </div>
-                </div>
-
-               {/* Start Button (Moved Up) */}
-               <div className="absolute bottom-44 left-1/2 -translate-x-1/2 z-40" onClick={handleStart}>
-                  <div className="relative group cursor-pointer w-48 h-48 md:w-56 md:h-56 flex items-center justify-center">
-                      <div className="absolute inset-2 bg-purple-600/30 blur-3xl rounded-full animate-pulse-glow pointer-events-none"></div>
-                      <button className="relative w-full h-full rounded-full border border-white/10 overflow-hidden transition-transform duration-500 group-hover:scale-105 active:scale-95" style={{ background: 'radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(216, 180, 254, 0.5) 25%, rgba(107, 33, 168, 0.8) 60%, rgba(15, 23, 42, 0.98) 100%)', boxShadow: '0 0 60px rgba(168, 85, 247, 0.6), inset 0 0 50px rgba(255, 255, 255, 0.25)' }}>
-                          <div className="absolute top-8 left-10 w-16 h-8 bg-white/40 blur-xl rounded-full transform -rotate-45 pointer-events-none"></div>
-                          <div className="absolute bottom-6 right-10 w-12 h-6 bg-purple-400/20 blur-lg rounded-full pointer-events-none"></div>
-                          <div className="absolute inset-0 opacity-70 mix-blend-color-dodge pointer-events-none"><div className="absolute w-full h-full bg-gradient-to-r from-transparent via-purple-300/20 to-transparent animate-mist blur-2xl"></div><div className="absolute w-full h-full bg-gradient-to-b from-transparent via-pink-300/10 to-transparent animate-mist blur-2xl" style={{ animationDelay: '-4s' }}></div></div>
-                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 h-2/3 rounded-full border border-purple-200/40 animate-spin-slow blur-[1px]"></div>
-                          <div className="relative z-10 flex flex-col items-center mt-4"><span className="text-2xl md:text-3xl font-display font-bold text-white tracking-[0.2em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-yellow-100 transition-colors duration-300">START</span><span className="text-[10px] md:text-xs text-purple-100/70 mt-1 font-light tracking-widest uppercase border-t border-purple-400/30 pt-1">운명 확인하기</span></div>
-                      </button>
-                      <div className="absolute -bottom-6 w-32 h-6 bg-black/60 blur-xl rounded-[100%] pointer-events-none"></div>
-                  </div>
-               </div>
-            </div>
-
-            {savedReadings.length > 0 && (
-              <div className="w-full max-w-3xl mt-8 px-4 md:px-0 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-                <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-[0_0_30px_rgba(76,29,149,0.25)] p-5 md:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-purple-300 text-xs tracking-[0.25em] uppercase font-bold">Reading History</p>
-                      <h3 className="text-white text-xl md:text-2xl font-display mt-1">최근 저장된 리딩</h3>
-                    </div>
-                    <span className="text-xs text-purple-200/70">최대 {MAX_SAVED_READINGS}개</span>
-                  </div>
-                  <div className="space-y-3">
-                    {savedReadings.slice(0, 4).map((item) => (
-                      <div key={item.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/[0.07] transition-colors">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-white font-medium leading-relaxed truncate">{item.question}</p>
-                            <p className="text-xs text-purple-200/60 mt-1">{new Date(item.createdAt).toLocaleString('ko-KR')} · {READING_TYPES[(item.readingType as ReadingTypeKey) || 'flow']?.label || '기본 흐름'}</p>
-                            <p className="text-sm text-gray-300 mt-2 line-clamp-2">{item.reading.oneLineAdvice}</p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button onClick={() => loadSavedReading(item)} className="px-3 py-2 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white text-sm font-semibold transition-colors">다시 보기</button>
-                            <button onClick={() => deleteSavedReading(item.id)} className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-sm transition-colors">삭제</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {isIdle ? (
+          <LandingScreen onStart={handleStart} />
+        ) : (
+          <>
+            <header className={`transition-all duration-700 z-50 ${isIdle ? 'mt-8 mb-4' : 'mt-4 mb-4 scale-90'}`}>
+              <div className="bg-purple-600/30 backdrop-blur-md border border-purple-400/30 rounded-full px-6 py-1 shadow-lg inline-block mb-3 animate-fade-in-up mx-auto block w-fit">
+                <p className="text-yellow-200 font-bold text-xs md:text-sm tracking-widest drop-shadow-md text-center">별처럼 빛나는 당신의 미래를 위한</p>
               </div>
-            )}
-          </div>
+              <h1 className="font-display text-4xl md:text-6xl text-white font-extrabold text-center tracking-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <span className="bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-yellow-100 to-white drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)]">Starot</span>
+              </h1>
+            </header>
+          </>
         )}
         {isSelectingPhase && revealedCards.length < targetCardCount && (
           <div className="flex flex-col items-center animate-fade-in-up w-full flex-1 justify-center z-20 relative">
