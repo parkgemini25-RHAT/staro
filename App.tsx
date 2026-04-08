@@ -575,7 +575,17 @@ const App: React.FC = () => {
       </button>
       <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center min-h-screen p-4 md:p-8">
         {isIdle ? (
-          <LandingScreen onStart={handleStart} />
+          <LandingScreen
+            question={question}
+            selectedReadingTypeLabel={READING_TYPES[selectedReadingType].label}
+            readingDescription={READING_TYPES[selectedReadingType].description}
+            questionTip={QUESTION_GUIDE_TIPS[questionGuideIndex]}
+            exampleQuestion={EXAMPLE_QUESTIONS[placeholderIndex]}
+            onQuestionChange={setQuestion}
+            onStart={handleStart}
+            onRefineQuestion={refineQuestion}
+            onFillExample={fillQuestionExample}
+          />
         ) : (
           <>
             <header className={`transition-all duration-700 z-50 ${isIdle ? 'mt-8 mb-4' : 'mt-4 mb-4 scale-90'}`}>

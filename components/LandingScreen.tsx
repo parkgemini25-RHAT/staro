@@ -1,12 +1,30 @@
 import React from 'react';
 
 interface LandingScreenProps {
+  question: string;
+  selectedReadingTypeLabel: string;
+  readingDescription: string;
+  questionTip: string;
+  exampleQuestion: string;
+  onQuestionChange: (value: string) => void;
   onStart: () => void;
+  onRefineQuestion: () => void;
+  onFillExample: () => void;
 }
 
 const featurePills = ['오늘의 흐름', '관계 리딩', '결정 조언'];
 
-const LandingScreen: React.FC<LandingScreenProps> = ({ onStart }) => {
+const LandingScreen: React.FC<LandingScreenProps> = ({
+  question,
+  selectedReadingTypeLabel,
+  readingDescription,
+  questionTip,
+  exampleQuestion,
+  onQuestionChange,
+  onStart,
+  onRefineQuestion,
+  onFillExample,
+}) => {
   return (
     <section className="relative isolate min-h-screen overflow-hidden px-5 py-6 sm:px-8 lg:px-12">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(215,182,103,0.18),transparent_30%),radial-gradient(circle_at_20%_20%,rgba(140,98,255,0.16),transparent_28%),linear-gradient(180deg,#05030b_0%,#11071d_42%,#1a0d2c_100%)]" />
@@ -25,7 +43,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onStart }) => {
             <div className="mt-6 max-w-3xl">
               <p className="font-serif text-sm tracking-[0.45em] text-[#c8b27a]/90 uppercase">Tarot for modern rituals</p>
               <h1 className="mt-5 font-display text-5xl leading-[0.92] text-[#fff7e8] sm:text-6xl lg:text-7xl">
-                시크릿 카드,
+                Starot,
                 <br />
                 <span className="text-[#d6b36a]">당신의 흐름을 비추다</span>
               </h1>
@@ -46,18 +64,45 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onStart }) => {
               ))}
             </div>
 
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <button
-                onClick={onStart}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full border border-[#f0d48a]/40 bg-[#f1d18a] px-8 py-4 font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)]"
-              >
-                <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.55),transparent)] opacity-0 transition group-hover:translate-x-full group-hover:opacity-100" />
-                리딩 시작하기
-              </button>
-              <div className="text-sm leading-6 text-[#cbbfe8]">
-                질문 하나만 준비하면 돼요.
-                <br />
-                관계, 결정, 이번 달 흐름까지 바로 볼 수 있어요.
+            <div className="mt-10 max-w-xl rounded-[1.8rem] border border-white/12 bg-white/6 p-4 shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-5">
+              <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.24em] text-[#cdb682]">
+                <span>Reading setup</span>
+                <span className="rounded-full border border-white/12 px-3 py-1 text-[10px] text-[#f6e8bf]">{selectedReadingTypeLabel}</span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-[#d8cfeb]">{readingDescription}</p>
+              <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#090512]/70 p-4">
+                <label className="block text-xs uppercase tracking-[0.24em] text-[#cdb682]">질문 입력</label>
+                <textarea
+                  value={question}
+                  onChange={(e) => onQuestionChange(e.target.value)}
+                  placeholder={exampleQuestion}
+                  rows={4}
+                  className="mt-3 w-full resize-none bg-transparent text-base leading-7 text-[#fff8ea] outline-none placeholder:text-[#9f96b8]"
+                />
+                <div className="mt-3 rounded-2xl border border-[#d6b36a]/18 bg-[#f0d48a]/8 px-4 py-3 text-sm leading-6 text-[#efe4bf]">
+                  질문 팁 · {questionTip}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    onClick={onFillExample}
+                    className="rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm text-[#efe7ff] transition hover:bg-white/10"
+                  >
+                    예시 질문 넣기
+                  </button>
+                  <button
+                    onClick={onRefineQuestion}
+                    className="rounded-full border border-[#d6b36a]/30 bg-[#d6b36a]/12 px-4 py-2 text-sm text-[#f5dfaa] transition hover:bg-[#d6b36a]/20"
+                  >
+                    질문 다듬기
+                  </button>
+                  <button
+                    onClick={onStart}
+                    className="group relative inline-flex items-center justify-center overflow-hidden rounded-full border border-[#f0d48a]/40 bg-[#f1d18a] px-6 py-3 font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)]"
+                  >
+                    <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.55),transparent)] opacity-0 transition group-hover:translate-x-full group-hover:opacity-100" />
+                    리딩 시작하기
+                  </button>
+                </div>
               </div>
             </div>
           </div>
