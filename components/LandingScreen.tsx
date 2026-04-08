@@ -25,7 +25,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl items-start sm:items-center">
         <div className="grid w-full gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10">
-          <div className="order-2 animate-fade-in-up lg:order-1">
+          <div className="order-1 animate-fade-in-up lg:order-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#d6b36a]/35 bg-white/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f3d98b] backdrop-blur-md sm:px-4 sm:py-2 sm:text-[11px] sm:tracking-[0.28em]">
               Oracle Atelier
             </div>
@@ -53,8 +53,9 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 </span>
               </div>
               <p className="mt-3 text-[13px] leading-5 text-[#d8cfeb] sm:text-sm sm:leading-6">
-                가장 기본이 되는 4장 스프레드로 현재 흐름을 읽습니다. 복잡한 선택 없이,
-                질문만 입력하면 바로 시작돼요.
+                가장 기본이 되는 4카드 타로 리딩이에요. 첫 번째 카드는 지나온 흐름,
+                두 번째 카드는 지금의 상태, 세 번째 카드는 가까운 미래,
+                마지막 카드는 지금 필요한 조언을 보여줍니다.
               </p>
               <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-[#090512]/70 p-3.5 sm:rounded-[1.4rem] sm:p-4">
                 <label className="block text-[10px] uppercase tracking-[0.22em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
@@ -89,7 +90,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
             </div>
           </div>
 
-          <div className="order-1 animate-fade-in-up [animation-delay:160ms] [animation-fill-mode:both] lg:order-2">
+          <div className="order-2 animate-fade-in-up [animation-delay:160ms] [animation-fill-mode:both] lg:order-2">
             <div className="relative mx-auto max-w-[24rem] sm:max-w-[28rem]">
               <div className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] blur-2xl" />
               <div className="relative overflow-hidden rounded-[1.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(16,10,29,0.88),rgba(10,6,18,0.92))] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-[2rem] sm:p-6">
@@ -105,9 +106,9 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                         Basic spread
                       </p>
                       <h2 className="mt-3 font-display text-2xl leading-tight text-[#fff6e6] sm:text-3xl">
-                        Present
+                        Four cards,
                         <br />
-                        to Advice
+                        one clear flow
                       </h2>
                     </div>
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#f0d48a]/30 bg-white/8 text-xl text-[#f0d48a] shadow-[inset_0_0_30px_rgba(240,212,138,0.15)] sm:h-14 sm:w-14 sm:text-2xl">
@@ -132,15 +133,17 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
 
                 <div className="mt-4 grid gap-2.5 sm:mt-5 sm:grid-cols-2 sm:gap-3">
                   <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-3.5 sm:rounded-[1.4rem] sm:p-4">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">What you get</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">How to read it</p>
                     <p className="mt-2 text-[13px] leading-5 text-[#ece3ff] sm:text-sm sm:leading-6">
-                      현재 상황 해석, 가까운 미래 흐름, 그리고 지금 필요한 한 줄 조언까지 바로 확인할 수 있어요.
+                      과거 카드로 배경을 보고, 현재 카드로 지금의 중심을 읽고, 미래 카드로 가까운 흐름을 확인한 뒤,
+                      마지막 조언 카드로 지금 가장 필요한 태도를 정리합니다.
                     </p>
                   </div>
                   <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-3.5 sm:rounded-[1.4rem] sm:p-4">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">Best for</p>
                     <p className="mt-2 text-[13px] leading-5 text-[#ece3ff] sm:text-sm sm:leading-6">
-                      관계, 일, 감정, 선택 앞에서 전체 흐름을 먼저 보고 싶은 순간에 가장 잘 맞는 시작형 리딩입니다.
+                      관계, 일, 감정, 선택 앞에서 전체 흐름을 먼저 보고 싶은 순간에 잘 맞아요.
+                      처음 타로를 보는 사람도 이해하기 쉬운 구성이에요.
                     </p>
                   </div>
                 </div>
