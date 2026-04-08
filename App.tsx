@@ -577,13 +577,9 @@ const App: React.FC = () => {
         {isIdle ? (
           <LandingScreen
             question={question}
-            selectedReadingTypeLabel={READING_TYPES[selectedReadingType].label}
-            readingDescription={READING_TYPES[selectedReadingType].description}
-            questionTip={QUESTION_GUIDE_TIPS[questionGuideIndex]}
             exampleQuestion={EXAMPLE_QUESTIONS[placeholderIndex]}
             onQuestionChange={setQuestion}
             onStart={handleStart}
-            onRefineQuestion={refineQuestion}
             onFillExample={fillQuestionExample}
           />
         ) : (
