@@ -564,7 +564,7 @@ const App: React.FC = () => {
       <BackgroundStars />
       <button 
         onClick={toggleMute}
-        className="fixed top-6 left-6 z-[9999] p-3 rounded-full bg-slate-800 border-2 border-white/30 hover:border-white text-white shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:scale-110 transition-all cursor-pointer"
+        className="fixed top-6 right-6 z-[9999] p-3 rounded-full bg-slate-800 border-2 border-white/30 hover:border-white text-white shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:scale-110 transition-all cursor-pointer"
         title={isMuted ? "소리 켜기" : "소리 끄기"}
       >
         {isMuted ? (
