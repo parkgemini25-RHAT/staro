@@ -41,7 +41,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
             </div>
 
             <div className="mt-4 max-w-3xl sm:mt-6">
-              <p className="font-serif text-[11px] tracking-[0.32em] text-[#c8b27a]/90 uppercase sm:text-sm sm:tracking-[0.45em]">
+              <p className="text-[11px] tracking-[0.32em] text-[#c8b27a]/90 uppercase sm:text-sm sm:tracking-[0.45em]">
                 Tarot for modern rituals
               </p>
               <h1 className="mt-4 font-display text-[2.9rem] leading-[0.9] text-[#fff7e8] sm:mt-5 sm:text-6xl lg:text-7xl">
