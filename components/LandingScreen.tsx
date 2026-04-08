@@ -95,7 +95,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
               <div className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] blur-2xl" />
               <div className="relative overflow-hidden rounded-[1.45rem] border border-white/12 bg-[linear-gradient(180deg,rgba(16,10,29,0.88),rgba(10,6,18,0.92))] p-3.5 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-[2rem] sm:p-6">
                 <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#cdb682] sm:text-xs sm:tracking-[0.28em]">
-                  <span>How it works</span>
+                  <span>4카드 타로는 이렇게 봐요</span>
                   <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">4 cards</span>
                 </div>
 
@@ -103,12 +103,12 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[10px] tracking-[0.18em] text-[#f0dca4] uppercase sm:text-sm sm:tracking-[0.24em]">
-                        Basic spread
+                        기본 흐름 리딩
                       </p>
                       <h2 className="mt-2.5 font-display text-[1.55rem] leading-tight text-[#fff6e6] sm:mt-3 sm:text-3xl">
-                        Four cards,
+                        질문 하나를
                         <br />
-                        one clear flow
+                        4장으로 나눠서 봅니다
                       </h2>
                     </div>
                     <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#f0d48a]/30 bg-white/8 text-lg text-[#f0d48a] shadow-[inset_0_0_30px_rgba(240,212,138,0.15)] sm:h-14 sm:w-14 sm:text-2xl">
@@ -133,17 +133,17 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
 
                 <div className="mt-4 grid gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-3">
                   <div className="rounded-[1rem] border border-white/10 bg-white/5 p-3 sm:rounded-[1.4rem] sm:p-4">
-                    <p className="text-[9px] uppercase tracking-[0.14em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">How to read it</p>
+                    <p className="text-[9px] uppercase tracking-[0.14em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">카드가 알려주는 것</p>
                     <p className="mt-2 text-[12px] leading-5 text-[#ece3ff] sm:text-sm sm:leading-6">
-                      과거 카드로 배경을 보고, 현재 카드로 지금의 중심을 읽고, 미래 카드로 가까운 흐름을 확인한 뒤,
-                      마지막 조언 카드로 지금 가장 필요한 태도를 정리합니다.
+                      1장은 왜 이런 고민이 생겼는지 배경을 보고, 2장은 지금 내 상태를 봐요.
+                      3장은 가까운 흐름이 어디로 가는지 보여주고, 4장은 지금 가장 도움이 되는 조언을 줍니다.
                     </p>
                   </div>
                   <div className="rounded-[1rem] border border-white/10 bg-white/5 p-3 sm:rounded-[1.4rem] sm:p-4">
-                    <p className="text-[9px] uppercase tracking-[0.14em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">Best for</p>
+                    <p className="text-[9px] uppercase tracking-[0.14em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">이럴 때 잘 맞아요</p>
                     <p className="mt-2 text-[12px] leading-5 text-[#ece3ff] sm:text-sm sm:leading-6">
-                      관계, 일, 감정, 선택 앞에서 전체 흐름을 먼저 보고 싶은 순간에 잘 맞아요.
-                      처음 타로를 보는 사람도 이해하기 쉬운 구성이에요.
+                      연애, 일, 인간관계, 선택 같은 고민에서 하나만 콕 집기보다,
+                      전체 흐름을 먼저 이해하고 싶을 때 잘 맞습니다. 타로를 처음 보는 사람도 보기 쉬워요.
                     </p>
                   </div>
                 </div>
