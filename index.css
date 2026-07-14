@@ -100,3 +100,92 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Holographic card (technique from simeydotme/pokemon-cards-css)
+   Pointer position drives CSS vars: --px/--py (pointer %), --rx/--ry (tilt),
+   --holo-o (effect intensity).
+--------------------------------------------------------------------------- */
+.holo-scene {
+  perspective: 900px;
+}
+
+@keyframes holo-flip-in {
+  0% { transform: rotateY(180deg) scale(0.86); }
+  60% { transform: rotateY(-8deg) scale(1.04); }
+  100% { transform: rotateY(0deg) scale(1); }
+}
+
+.holo-flip {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: holo-flip-in 0.85s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+
+.holo-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.holo-back {
+  transform: rotateY(180deg);
+}
+
+.holo-tilt {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.45s ease-out;
+  will-change: transform;
+  touch-action: none;
+}
+
+.holo-tilt.interacting {
+  transition: transform 0.06s linear;
+}
+
+.holo-shine,
+.holo-glare {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  border-radius: 0.75rem;
+  opacity: var(--holo-o, 0);
+  transition: opacity 0.4s ease-out;
+}
+
+.holo-shine {
+  background: linear-gradient(
+    115deg,
+    transparent 18%,
+    rgba(120, 231, 255, 0.28) 34%,
+    rgba(255, 137, 255, 0.25) 44%,
+    rgba(240, 212, 138, 0.38) 52%,
+    rgba(137, 255, 189, 0.22) 62%,
+    transparent 80%
+  );
+  background-size: 240% 240%;
+  background-position: calc(50% + (var(--px, 50%) - 50%) * -1.4) calc(50% + (var(--py, 50%) - 50%) * -1.4);
+  mix-blend-mode: color-dodge;
+  filter: brightness(0.85) contrast(1.4);
+}
+
+.holo-glare {
+  background: radial-gradient(
+    circle at var(--px, 50%) var(--py, 50%),
+    rgba(255, 248, 224, 0.55) 0%,
+    rgba(255, 248, 224, 0.12) 32%,
+    transparent 62%
+  );
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holo-flip {
+    animation: none;
+  }
+  .holo-tilt {
+    transform: none !important;
+  }
+}

@@ -85,6 +85,30 @@ export const validateReadingRequest = (body: unknown): { question: string; cards
   return { question: question.trim(), cards: parsedCards, readingTypeLabel: label };
 };
 
+// Dev-only mock so the full flow can be exercised without an API key.
+// The vite dev middleware falls back to this when GEMINI_API_KEY is missing;
+// the production Vercel function never uses it.
+export const generateMockReading = (question: string, cards: ReadingCardInput[]): ReadingResult => {
+  const byPosition: Record<string, ReadingCardInput | undefined> = {};
+  cards.forEach((c) => { byPosition[c.position] = c; });
+
+  const name = (pos: string) => byPosition[pos]?.nameKo ?? '카드';
+  const orient = (pos: string) => (byPosition[pos]?.isReversed ? '역방향' : '정방향');
+
+  return {
+    pastReading: `지나온 시간에는 ${name('past')}(${orient('past')})의 기운이 흐르고 있었어요. 지금의 고민이 만들어진 배경에는 스스로 정리하지 못한 감정과 선택들이 겹겹이 쌓여 있었습니다.`,
+    pastCardMeaning: `${name('past')} ${orient('past')}은(는) 과거의 경험이 현재의 토대가 되었음을 상징합니다.`,
+    presentReading: `현재는 ${name('present')}(${orient('present')})이 보여주듯, 겉으로는 평온해 보여도 내면에서는 방향을 정하려는 움직임이 시작된 상태예요.`,
+    presentCardMeaning: `${name('present')} ${orient('present')}은(는) 지금 이 순간의 에너지와 마음가짐을 나타냅니다.`,
+    futureReading: `가까운 미래에는 ${name('future')}(${orient('future')})의 흐름이 다가옵니다. 작은 계기가 생각보다 큰 변화를 이끌어낼 수 있는 시기입니다.`,
+    futureCardMeaning: `${name('future')} ${orient('future')}은(는) 다가올 흐름의 방향성을 암시합니다.`,
+    adviceReading: `${name('advice')}(${orient('advice')})이 전하는 조언은 분명합니다. 결과를 통제하려 하기보다, 지금 할 수 있는 한 걸음에 집중하세요.`,
+    adviceCardMeaning: `${name('advice')} ${orient('advice')}은(는) 지금 취해야 할 태도와 행동의 힌트를 줍니다.`,
+    summary: `"${question}"에 대한 카드들의 흐름을 종합하면, 과거의 경험이 현재의 갈림길을 만들었고, 그 갈림길은 이미 한쪽으로 기울기 시작했습니다. 다가오는 흐름은 당신이 먼저 움직일 때 훨씬 유리하게 작동합니다. 주저함은 이해되지만, 카드들은 공통적으로 '준비는 이미 충분하다'고 말하고 있어요. 남은 것은 타이밍이 아니라 결심입니다. ※ 현재 연습 모드(목업) 응답입니다 — GEMINI_API_KEY를 설정하면 실제 AI 리딩이 제공됩니다.`,
+    oneLineAdvice: '흐름은 이미 움직이기 시작했으니, 첫걸음을 미루지 마세요.',
+  };
+};
+
 export const generateReading = async (
   apiKey: string | undefined,
   question: string,

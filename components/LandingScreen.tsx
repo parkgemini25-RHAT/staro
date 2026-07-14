@@ -3,6 +3,7 @@ import React from 'react';
 interface LandingScreenProps {
   question: string;
   exampleQuestion: string;
+  errorMessage?: string | null;
   onQuestionChange: (value: string) => void;
   onStart: () => void;
   onFillExample: () => void;
@@ -11,6 +12,7 @@ interface LandingScreenProps {
 const LandingScreen: React.FC<LandingScreenProps> = ({
   question,
   exampleQuestion,
+  errorMessage,
   onQuestionChange,
   onStart,
   onFillExample,
@@ -62,6 +64,11 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                   rows={4}
                   className="mt-3 min-h-[108px] w-full resize-none bg-transparent text-[14px] leading-6 text-[#fff8ea] outline-none placeholder:text-[#9f96b8] sm:min-h-[112px] sm:text-base sm:leading-7"
                 />
+                {errorMessage && (
+                  <p className="mt-3 rounded-[0.95rem] border border-[#e07a7a]/30 bg-[#e07a7a]/10 px-3 py-2.5 text-[12px] leading-5 text-[#f3c8c8] sm:rounded-2xl sm:px-4 sm:text-sm animate-fade-in-up">
+                    {errorMessage}
+                  </p>
+                )}
                 <p className="mt-3 rounded-[0.95rem] border border-[#d6b36a]/18 bg-[#f0d48a]/8 px-3 py-3 text-[12px] leading-5 text-[#efe4bf] sm:rounded-2xl sm:px-4 sm:text-sm sm:leading-6">
                   팁 · 예/아니오보다, 지금 어떤 흐름으로 흘러가는지 묻는 질문이 더 잘 맞아요.
                 </p>

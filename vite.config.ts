@@ -26,6 +26,16 @@ const readingApiDevPlugin = (apiKey: string | undefined): Plugin => ({
 
         const tarot = (await server.ssrLoadModule('/api/_lib/tarot.ts')) as typeof import('./api/_lib/tarot');
         const { question, cards, readingTypeLabel } = tarot.validateReadingRequest(body);
+
+        if (!apiKey) {
+          // Dev-only mock mode: exercise the full flow without an API key.
+          console.warn('[api/reading] GEMINI_API_KEY not set — serving MOCK reading (dev only)');
+          const mock = tarot.generateMockReading(question, cards);
+          await new Promise((r) => setTimeout(r, 1200));
+          respond(200, mock);
+          return;
+        }
+
         const result = await tarot.generateReading(apiKey, question, cards, readingTypeLabel);
         respond(200, result);
       } catch (error: any) {

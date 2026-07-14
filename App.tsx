@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, MotionConfig } from 'motion/react';
 import { FULL_DECK } from './constants';
 import { DrawnCard, ReadingResponse, ReadingState, SavedReading, ReadingPosition } from './types';
 import { getTarotReading } from './services/readingService';
@@ -122,18 +123,32 @@ const AtelierBackground = () => (
 
 const STORAGE_KEY = 'starot-reading-history';
 const MAX_SAVED_READINGS = 12;
+const FAN_SPREAD_DEG = 90; // total arc angle of the deck fan
+const CARD_FLIGHT_MS = 450; // deck → slot layout morph duration (flip starts after this)
+
+// A revealed card remembers which deck card it came from so Motion's layoutId
+// can morph the fan card into the slot (FLIP / shared layout technique).
+type PickedCard = DrawnCard & { deckId?: number };
 
 const App: React.FC = () => {
   const [question, setQuestion] = useState('');
+  const [questionError, setQuestionError] = useState<string | null>(null);
   const [selectedReadingType, setSelectedReadingType] = useState<ReadingTypeKey>('flow');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [secretCards, setSecretCards] = useState<DrawnCard[]>([]);
-  const [revealedCards, setRevealedCards] = useState<DrawnCard[]>([]);
+  const [revealedCards, setRevealedCards] = useState<PickedCard[]>([]);
   const [reading, setReading] = useState<ReadingResponse | null>(null);
   const [savedReadings, setSavedReadings] = useState<SavedReading[]>([]);
   const [state, setState] = useState<ReadingState>(ReadingState.IDLE);
-  const [deckCards, setDeckCards] = useState<number[]>([]); 
+  const [deckCards, setDeckCards] = useState<number[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
+  const [fanWidth, setFanWidth] = useState(0);
+
+  // Pick sequencing: lock while a pick is in progress, queue one click made during the lock
+  const pickLockRef = useRef(false);
+  const pendingPickRef = useRef<number | null>(null);
+  const startPickRef = useRef<(deckIndex: number) => void>(() => {});
+  const fanRef = useRef<HTMLDivElement | null>(null);
 
   // Mute State
   const [isMuted, setIsMuted] = useState(false);
@@ -263,14 +278,20 @@ const App: React.FC = () => {
 
   const handleStart = () => {
     if (!question.trim()) {
-      alert("질문을 입력해주세요.");
+      setQuestionError('질문을 입력해주세요.');
       return;
     }
+    setQuestionError(null);
     playSfx('start');
     playBgm();
 
     const config = READING_TYPES[selectedReadingType];
-    const shuffled = [...FULL_DECK].sort(() => 0.5 - Math.random());
+    // Fisher-Yates shuffle (unbiased)
+    const shuffled = [...FULL_DECK];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     const selected = shuffled.slice(0, config.positions.length);
     const finalCards: DrawnCard[] = selected.map((card, index) => ({
       ...card,
@@ -281,7 +302,10 @@ const App: React.FC = () => {
     setSecretCards(finalCards);
     setRevealedCards([]);
     setReading(null);
-    setState(ReadingState.DRAWING); 
+    pickLockRef.current = false;
+    pendingPickRef.current = null;
+    setIsShuffling(false);
+    setState(ReadingState.DRAWING);
     setDeckCards(Array.from({ length: 78 }, (_, i) => i));
     generateReadingBackground(question, finalCards);
   };
@@ -297,26 +321,75 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCardPick = (deckIndex: number) => {
-    if (revealedCards.length >= 4 || isShuffling) return;
-    setIsShuffling(true);
-    playSfx('shuffle');
-    setTimeout(() => {
-        const nextCard = secretCards[revealedCards.length];
-        setRevealedCards(prev => [...prev, nextCard]);
-        setDeckCards(prev => prev.filter(id => id !== deckIndex));
-        playSfx('pick');
-        setTimeout(() => {
-            setIsShuffling(false);
-        }, 100); 
-    }, 600); 
+  // Full shuffle only on the first pick; later picks morph straight to their slot
+  // (Motion layoutId FLIP animation — the fan card becomes the slot card).
+  const startPick = (deckIndex: number) => {
+    if (state !== ReadingState.DRAWING || revealedCards.length >= targetCardCount) return;
+    if (!deckCards.includes(deckIndex)) return;
+    pickLockRef.current = true;
+    const isFirstPick = revealedCards.length === 0;
+
+    const commitPick = () => {
+      playSfx('pick');
+      setDeckCards(prev => prev.filter(id => id !== deckIndex));
+      setRevealedCards(prev =>
+        prev.length < secretCards.length
+          ? [...prev, { ...secretCards[prev.length], deckId: deckIndex }]
+          : prev
+      );
+      // Release the lock after flight + flip settle, then run a queued click.
+      setTimeout(() => {
+        pickLockRef.current = false;
+        const pending = pendingPickRef.current;
+        pendingPickRef.current = null;
+        if (pending != null) startPickRef.current(pending);
+      }, CARD_FLIGHT_MS + 250);
+    };
+
+    if (isFirstPick) {
+      setIsShuffling(true);
+      playSfx('shuffle');
+      setTimeout(() => { setIsShuffling(false); commitPick(); }, 600);
+    } else {
+      commitPick();
+    }
   };
+
+  // Keep a ref to the latest closure so queued picks never act on stale state
+  useEffect(() => { startPickRef.current = startPick; });
+
+  const handleCardPick = (deckIndex: number) => {
+    if (state !== ReadingState.DRAWING || revealedCards.length >= targetCardCount) return;
+    if (pickLockRef.current) {
+      // Don't drop clicks made mid-pick — remember the last one and run it next.
+      pendingPickRef.current = deckIndex;
+      return;
+    }
+    startPick(deckIndex);
+  };
+
+  // Fan geometry: measure container width to derive the arc radius
+  useEffect(() => {
+    const el = fanRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) setFanWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    setFanWidth(el.getBoundingClientRect().width);
+    return () => observer.disconnect();
+  }, [state]);
 
   const targetCardCount = secretCards.length || READING_TYPES[selectedReadingType].positions.length;
   const showResults = revealedCards.length === targetCardCount && reading !== null;
   const isSelectingPhase = state === ReadingState.DRAWING && !showResults;
   const currentReadingConfig = READING_TYPES[selectedReadingType];
   const isIdle = state === ReadingState.IDLE;
+
+  // Deck fan arc geometry, sized to the measured container width
+  // chord = 2r·sin(spread/2) must fit the container; height covers the edge drop
+  const fanRadius = Math.max(220, Math.min((fanWidth - 90) / 1.41, 460));
+  const fanHeight = Math.round(fanRadius * 0.3 + 200);
 
   const [isExportingShareCard, setIsExportingShareCard] = useState(false);
 
@@ -447,6 +520,7 @@ const App: React.FC = () => {
   };
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen relative flex flex-col items-center overflow-x-hidden font-sans">
       <AtelierBackground />
       <button
@@ -465,7 +539,8 @@ const App: React.FC = () => {
           <LandingScreen
             question={question}
             exampleQuestion={EXAMPLE_QUESTIONS[placeholderIndex]}
-            onQuestionChange={setQuestion}
+            errorMessage={questionError}
+            onQuestionChange={(value) => { setQuestion(value); if (questionError) setQuestionError(null); }}
             onStart={handleStart}
             onFillExample={fillQuestionExample}
           />
@@ -485,17 +560,30 @@ const App: React.FC = () => {
             <h2 className="mb-10 text-center min-h-[3rem] flex items-center justify-center">
               {renderInstructionText()}
             </h2>
-            <div className="w-full overflow-x-auto no-scrollbar py-10 px-4">
-              <div className="flex justify-center min-w-max px-10 transition-all duration-500">
-                 {deckCards.map((id, index) => {
-                   const cardClass = isShuffling ? "-ml-14 md:-ml-20 scale-90 animate-shuffle-shake cursor-not-allowed opacity-60 blur-[2px] brightness-75" : "-ml-8 md:-ml-12 hover:-translate-y-12 hover:scale-110 hover:rotate-3 hover:z-50 cursor-pointer";
-                   return (
-                     <div key={id} onClick={() => !isShuffling && handleCardPick(id)} className={`relative w-16 h-28 md:w-24 md:h-40 first:ml-0 transition-all duration-500 ease-out group transform-gpu ${cardClass}`} style={{ zIndex: index }}>
-                       <div className="w-full h-full rounded-lg bg-[linear-gradient(180deg,#241536,#0d0718)] border border-[#d6b36a]/25 shadow-xl group-hover:border-[#d6b36a]/70 group-hover:shadow-[0_12px_32px_rgba(214,179,106,0.22)] overflow-hidden"><div className="absolute inset-1 rounded-md border border-white/10"></div><div className="absolute inset-0 flex items-center justify-center"><span className="text-[#d6b36a]/45 group-hover:text-[#f0d48a] text-lg transition-colors">✦</span></div></div>
-                     </div>
-                   );
-                 })}
-              </div>
+            <div ref={fanRef} className="w-full relative" style={{ height: fanHeight }}>
+              {deckCards.map((id, index) => {
+                const n = deckCards.length;
+                const angle = n > 1 ? (index / (n - 1) - 0.5) * FAN_SPREAD_DEG : 0;
+                return (
+                  <div
+                    key={id}
+                    onClick={() => handleCardPick(id)}
+                    className={`absolute left-1/2 top-0 w-16 h-28 md:w-24 md:h-40 group ${isShuffling ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                    style={{
+                      zIndex: index,
+                      transform: `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
+                      transformOrigin: `50% ${fanRadius}px`,
+                      transition: 'transform 0.45s cubic-bezier(0.25, 0.8, 0.3, 1)',
+                    }}
+                  >
+                    <motion.div layoutId={`card-${id}`} className="w-full h-full">
+                      <div className={`w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-300 group-hover:-translate-y-3 group-hover:border-[#d6b36a]/70 group-hover:shadow-[0_12px_32px_rgba(214,179,106,0.28)] ${isShuffling ? 'animate-shuffle-shake opacity-60 blur-[2px] brightness-75' : ''}`}>
+                        <img src="/cards/back.png" alt="" className="w-full h-full object-cover transition-[filter] duration-300 group-hover:brightness-125" draggable={false} />
+                      </div>
+                    </motion.div>
+                  </div>
+                );
+              })}
             </div>
             <p className="text-[#cdb682]/70 text-sm mt-8 tracking-wide animate-pulse">카드를 클릭하여 운명을 확인하세요</p>
           </div>
@@ -507,7 +595,7 @@ const App: React.FC = () => {
                   const card = revealedCards[index];
                   return (
                     <div key={index} className="flex flex-col items-center">
-                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'border-[#d6b36a]/50 shadow-[0_0_24px_rgba(214,179,106,0.14)] animate-pulse' : ''}`}><span className="text-[#cdb682]/60 text-xs font-semibold tracking-[0.25em] uppercase">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={index * 200} />}
+                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'border-[#d6b36a]/50 shadow-[0_0_24px_rgba(214,179,106,0.14)] animate-pulse' : ''}`}><span className="text-[#cdb682]/60 text-xs font-semibold tracking-[0.25em] uppercase">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={CARD_FLIGHT_MS} />}
                     </div>
                   );
                })}
@@ -533,7 +621,7 @@ const App: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); setState(ReadingState.IDLE); }} className="text-[#cdb682] hover:text-[#fff7e8] transition-colors border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 text-xs md:text-sm uppercase tracking-[0.25em]">다른 질문 하기</button></div>
+                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); pickLockRef.current = false; pendingPickRef.current = null; setState(ReadingState.IDLE); }} className="text-[#cdb682] hover:text-[#fff7e8] transition-colors border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 text-xs md:text-sm uppercase tracking-[0.25em]">다른 질문 하기</button></div>
                 </div>
              )}
           </div>
@@ -541,6 +629,7 @@ const App: React.FC = () => {
         {state === ReadingState.ERROR && <div className="text-center p-8 rounded-[1.4rem] mt-12 border border-white/12 bg-white/5 backdrop-blur-md max-w-md"><p className="text-[#f3c8c8]">별들의 신호를 수신하는데 실패했습니다.</p><button onClick={() => setState(ReadingState.IDLE)} className="mt-4 text-xs uppercase tracking-[0.25em] text-[#cdb682] hover:text-[#fff7e8] border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 transition-colors">다시 시도하기</button></div>}
       </div>
     </div>
+    </MotionConfig>
   );
 };
 
