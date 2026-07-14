@@ -7,7 +7,7 @@ export interface TarotCard {
   number?: number | string;
 }
 
-export type ReadingPosition = 'past' | 'present' | 'future' | 'advice' | 'situation' | 'challenge' | 'outcome';
+export type ReadingPosition = 'past' | 'present' | 'future' | 'advice';
 
 export interface DrawnCard extends TarotCard {
   isReversed: boolean;
@@ -43,7 +43,5 @@ export interface SavedReading {
 export enum ReadingState {
   IDLE,
   DRAWING,
-  INTERPRETING,
-  COMPLETED,
   ERROR
 }

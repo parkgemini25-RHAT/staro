@@ -12,7 +12,6 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
   const [currentCandidateIndex, setCurrentCandidateIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [imgKey, setImgKey] = useState(0); // Force re-render on manual switch
 
   const positionLabels = {
     past: '과거 (Past)',
@@ -145,57 +144,47 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
     }
   };
 
-  const handleManualSwitch = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Move to next source manually, looping back to 0
-    setCurrentCandidateIndex(prev => (prev + 1) % imageCandidates.length);
-    setIsLoading(true);
-    setImgKey(prev => prev + 1);
-  };
-
   return (
-    <div 
+    <div
       className="flex flex-col items-center animate-fade-in-up"
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'both' }}
     >
-      <div className="text-xs uppercase tracking-widest text-purple-300 mb-2 font-semibold">
+      <div className="text-[10px] uppercase tracking-[0.25em] text-[#cdb682] mb-2 font-semibold">
         {positionLabels[card.position]}
       </div>
-      
+
       {/* Card Image Container */}
-      <div 
+      <div
         className={`
-          relative w-32 h-56 md:w-40 md:h-64 rounded-xl shadow-2xl 
-          transition-transform duration-700 hover:scale-105 hover:shadow-purple-500/20
-          ${card.isReversed ? 'rotate-180' : ''} cursor-pointer group
+          relative w-32 h-56 md:w-40 md:h-64 rounded-xl shadow-2xl
+          transition-transform duration-700 hover:scale-105
+          ${card.isReversed ? 'rotate-180' : ''}
         `}
-        onClick={handleManualSwitch}
-        title={`클릭하여 다른 이미지 버전 확인 (${currentCandidateIndex + 1}/${imageCandidates.length})`}
       >
-        <div className="w-full h-full rounded-xl overflow-hidden border-2 border-purple-500/30 bg-slate-800 relative">
-           
+        <div className="w-full h-full rounded-xl overflow-hidden border border-[#d6b36a]/30 bg-[#0d0718] relative">
+
            {/* Fallback Placeholder (shown if all images fail) */}
            {hasError && (
-             <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-2 text-center">
-                <span className="text-purple-500/50 text-4xl mb-2">?</span>
-                <span className="text-xs text-purple-300/50">{card.name}</span>
+             <div className="absolute inset-0 bg-[#0d0718] flex flex-col items-center justify-center p-2 text-center">
+                <span className="text-[#d6b36a]/50 text-3xl mb-2">✦</span>
+                <span className="text-xs text-[#cdb682]/70">{card.name}</span>
              </div>
            )}
 
            {/* Loading Overlay */}
            {isLoading && !hasError && (
-             <div className={`absolute inset-0 z-50 bg-slate-900/80 backdrop-blur-[2px] flex flex-col items-center justify-center ${card.isReversed ? 'rotate-180' : ''}`}>
-                <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+             <div className={`absolute inset-0 z-50 bg-[#0d0718]/85 backdrop-blur-[2px] flex flex-col items-center justify-center ${card.isReversed ? 'rotate-180' : ''}`}>
+                <div className="w-8 h-8 border-2 border-[#d6b36a] border-t-transparent rounded-full animate-spin mb-2"></div>
              </div>
            )}
 
-           {/* The Image */}
+           {/* The Image — slight desaturation to harmonize mixed-source scans */}
            {!hasError && (
-               <img 
-                 key={`${card.id}-${currentCandidateIndex}-${imgKey}`}
-                 src={activeUrl} 
+               <img
+                 key={`${card.id}-${currentCandidateIndex}`}
+                 src={activeUrl}
                  alt={card.name}
-                 className={`relative w-full h-full object-cover z-10 transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                 className={`relative w-full h-full object-cover z-10 saturate-[.85] contrast-[.97] transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
                  onLoad={handleImageLoad}
                  onError={handleImageError}
                  // Add referrer policy to help with some image hosts
@@ -203,25 +192,15 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
                />
            )}
 
-           {/* Reverse Overlay */}
-           {card.isReversed && (
-             <div className="absolute inset-0 bg-black/10 pointer-events-none z-20"></div>
-           )}
-           
-           {/* Hover Prompt */}
-           {!isLoading && !hasError && (
-             <div className={`absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center z-30 pointer-events-none ${card.isReversed ? 'rotate-180' : ''}`}>
-                  <span className="text-white text-[10px] font-light bg-black/50 px-2 py-1 rounded-full border border-white/20 backdrop-blur-sm whitespace-nowrap">
-                      이미지 변경 ({currentCandidateIndex + 1})
-                  </span>
-             </div>
-           )}
+           {/* Tone overlay — blends scans into the midnight-indigo palette */}
+           <div className="absolute inset-0 z-20 pointer-events-none bg-[linear-gradient(180deg,rgba(26,16,44,0.18),rgba(9,5,18,0.24))] mix-blend-multiply"></div>
+           <div className="absolute inset-0 z-20 pointer-events-none rounded-xl shadow-[inset_0_0_24px_rgba(9,5,18,0.55)]"></div>
         </div>
       </div>
 
       <div className="mt-3 text-center">
-        <p className="text-sm text-gray-200 font-medium font-display tracking-wide">{card.name}</p>
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${card.isReversed ? 'bg-red-900/50 text-red-200' : 'bg-green-900/50 text-green-200'}`}>
+        <p className="text-sm text-[#fff7e8] font-medium font-display tracking-wide">{card.name}</p>
+        <span className={`text-[10px] tracking-[0.18em] uppercase font-medium px-2.5 py-0.5 rounded-full mt-1.5 inline-block border ${card.isReversed ? 'border-white/20 text-[#e7def8]/70' : 'border-[#d6b36a]/40 text-[#f0d48a]'}`}>
           {card.isReversed ? 'Reversed' : 'Upright'}
         </span>
       </div>

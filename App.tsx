@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FULL_DECK } from './constants';
 import { DrawnCard, ReadingResponse, ReadingState, SavedReading, ReadingPosition } from './types';
-import { getTarotReading } from './services/geminiService';
+import { getTarotReading } from './services/readingService';
 import CardDisplay from './components/CardDisplay';
 import LandingScreen from './components/LandingScreen';
 
@@ -17,13 +17,6 @@ const EXAMPLE_QUESTIONS = [
   "오늘 하루 조심해야 할 점은 무엇인가요?",
   "이번 주말 소개팅 결과가 좋을까요?",
   "현재 겪고 있는 고민의 해결책이 있을까요?"
-];
-
-const QUESTION_GUIDE_TIPS = [
-  '예/아니오 질문보다 흐름이나 방향을 묻는 질문이 더 선명해요.',
-  '상대 마음만 묻기보다 관계가 어떻게 흘러갈지를 물으면 해석이 더 좋아요.',
-  '시점을 넣으면 더 또렷해져요. 예: 이번 달, 올해 안, 다음 프로젝트.',
-  '막연한 불안보다 지금 내가 알아야 할 점을 묻는 질문이 더 실용적이에요.',
 ];
 
 const READING_TYPES = {
@@ -55,78 +48,6 @@ const READING_TYPES = {
 
 type ReadingTypeKey = keyof typeof READING_TYPES;
 
-// Custom animation styles
-const animationStyles = `
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-  @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
-  }
-  @keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  @keyframes fadeInPlaceholder {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1); }
-    50% { box-shadow: 0 0 80px rgba(168, 85, 247, 0.7), inset 0 0 50px rgba(216, 180, 254, 0.3); }
-  }
-  @keyframes mist-swirl {
-    0% { transform: rotate(0deg) scale(1.5); opacity: 0; }
-    50% { opacity: 0.8; }
-    100% { transform: rotate(120deg) scale(1.5); opacity: 0; }
-  }
-  @keyframes shuffle-shake {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-2deg); }
-    75% { transform: rotate(2deg); }
-  }
-  .animate-fade-in-up {
-    animation: fadeInUp 0.8s ease-out forwards;
-  }
-  .animate-fade-out {
-    animation: fadeOut 0.5s ease-out forwards;
-  }
-  .animate-float {
-    animation: float 4s ease-in-out infinite;
-  }
-  .animate-spin-slow {
-    animation: spin-slow 20s linear infinite;
-  }
-  .animate-placeholder {
-    animation: fadeInPlaceholder 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-  .animate-pulse-glow {
-    animation: pulse-glow 4s infinite ease-in-out;
-  }
-  .animate-mist {
-    animation: mist-swirl 8s infinite linear;
-  }
-  .animate-shuffle-shake {
-    animation: shuffle-shake 0.1s linear infinite;
-  }
-  /* Hide scrollbar for deck spread */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-`;
-
-// Background Stars Component
 const wrapCanvasText = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -163,38 +84,41 @@ const wrapCanvasText = (
   ctx.fillText(line.trim(), x, currentY);
 };
 
-const BackgroundStars = () => {
-  const stars = Array.from({ length: 50 }).map((_, i) => ({
-    top: `${Math.random() * 100}%`,
-    left: `${Math.random() * 100}%`,
-    size: `${Math.random() * 3}px`,
-    delay: `${Math.random() * 5}s`,
-    duration: `${2 + Math.random() * 3}s`
-  }));
+// Fixed star field — module-level so positions stay stable across re-renders
+const STAR_FIELD = Array.from({ length: 50 }).map(() => ({
+  top: `${Math.random() * 100}%`,
+  left: `${Math.random() * 100}%`,
+  size: `${Math.random() * 3}px`,
+  delay: `${Math.random() * 5}s`,
+  duration: `${2 + Math.random() * 3}s`
+}));
 
-  return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0f0c29] via-[#2a1b4e] to-[#1a103c]"></div>
-      {stars.map((star, i) => (
-        <div
-          key={i}
-          className="star"
-          style={{
-            top: star.top,
-            left: star.left,
-            width: star.size,
-            height: star.size,
-            animationDelay: star.delay,
-            animationDuration: star.duration
-          }}
-        />
-      ))}
-      <div className="shooting-star" style={{ top: '10%', left: '80%', animationDelay: '2s' }}></div>
-      <div className="shooting-star" style={{ top: '30%', left: '90%', animationDelay: '7s' }}></div>
-      <div className="shooting-star" style={{ top: '5%', left: '50%', animationDelay: '12s' }}></div>
-    </div>
-  );
-};
+// Shared full-viewport background: same visual language as the landing screen
+const AtelierBackground = () => (
+  <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(215,182,103,0.16),transparent_30%),radial-gradient(circle_at_20%_20%,rgba(140,98,255,0.15),transparent_28%),linear-gradient(180deg,#05030b_0%,#11071d_42%,#1a0d2c_100%)]" />
+    <div className="absolute inset-0 opacity-40 mix-blend-screen [background-image:radial-gradient(circle_at_1px_1px,rgba(255,248,220,0.55)_1px,transparent_0)] [background-size:26px_26px]" />
+    <div className="absolute left-[-8%] top-[12%] h-64 w-64 rounded-full bg-[#7c3aed]/20 blur-3xl" />
+    <div className="absolute right-[-6%] top-[8%] h-72 w-72 rounded-full bg-[#f59e0b]/15 blur-3xl" />
+    <div className="absolute bottom-[-10%] left-1/2 h-72 w-[34rem] -translate-x-1/2 rounded-full bg-[#ec4899]/12 blur-3xl" />
+    {STAR_FIELD.map((star, i) => (
+      <div
+        key={i}
+        className="star"
+        style={{
+          top: star.top,
+          left: star.left,
+          width: star.size,
+          height: star.size,
+          animationDelay: star.delay,
+          animationDuration: star.duration
+        }}
+      />
+    ))}
+    <div className="shooting-star" style={{ top: '10%', left: '80%', animationDelay: '2s' }}></div>
+    <div className="shooting-star" style={{ top: '30%', left: '90%', animationDelay: '7s' }}></div>
+  </div>
+);
 
 const STORAGE_KEY = 'starot-reading-history';
 const MAX_SAVED_READINGS = 12;
@@ -203,7 +127,6 @@ const App: React.FC = () => {
   const [question, setQuestion] = useState('');
   const [selectedReadingType, setSelectedReadingType] = useState<ReadingTypeKey>('flow');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [questionGuideIndex, setQuestionGuideIndex] = useState(0);
   const [secretCards, setSecretCards] = useState<DrawnCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<DrawnCard[]>([]);
   const [reading, setReading] = useState<ReadingResponse | null>(null);
@@ -286,13 +209,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setQuestionGuideIndex((prev) => (prev + 1) % QUESTION_GUIDE_TIPS.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
@@ -339,32 +255,6 @@ const App: React.FC = () => {
 
   const deleteSavedReading = (id: string) => {
     setSavedReadings(prev => prev.filter(item => item.id !== id));
-  };
-
-  const refineQuestion = () => {
-    const trimmed = question.trim();
-    if (!trimmed) {
-      setQuestion('지금 제 상황에서 가장 먼저 점검해야 할 흐름은 무엇인가요?');
-      return;
-    }
-
-    let refined = trimmed;
-
-    if (!/[?.!]$/.test(refined)) {
-      refined = `${refined}?`;
-    }
-
-    const yesNoPatterns = ['좋을까요', '괜찮을까요', '될까요', '맞을까요', '가능할까요'];
-    const matched = yesNoPatterns.find(pattern => refined.includes(pattern));
-    if (matched) {
-      refined = refined.replace(matched, '어떤 흐름으로 전개될까요');
-    }
-
-    if (!refined.includes('지금') && !refined.includes('이번') && !refined.includes('올해') && !refined.includes('앞으로')) {
-      refined = `지금 ${refined.charAt(0).toLowerCase() + refined.slice(1)}`;
-    }
-
-    setQuestion(refined);
   };
 
   const fillQuestionExample = () => {
@@ -435,14 +325,12 @@ const App: React.FC = () => {
     const stepLabels = READING_TYPES[selectedReadingType].stepLabels;
     const keyword = stepLabels[count];
     if (!keyword) return null;
-    const colorClasses = ['text-yellow-300', 'text-blue-300', 'text-purple-300', 'text-pink-300'];
-    const colorClass = colorClasses[count] || 'text-white';
     return (
-      <span className="flex items-center gap-2">
-        <span className={`font-bold text-2xl md:text-3xl ${colorClass} drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] animate-pulse`}>
-          [{keyword}]
+      <span className="flex flex-col items-center gap-3">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[#d6b36a]/35 bg-white/5 px-4 py-1.5 text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase text-[#f3d98b] backdrop-blur-md">
+          {count + 1} / {stepLabels.length} · {keyword}
         </span>
-        <span className="text-white opacity-100 font-medium text-lg md:text-xl drop-shadow-md">흐름을 짚어볼 카드를 선택하세요</span>
+        <span className="text-[#fff7e8] font-display text-xl md:text-2xl">흐름을 짚어볼 카드를 선택하세요</span>
       </span>
     );
   };
@@ -459,9 +347,9 @@ const App: React.FC = () => {
       if (!ctx) throw new Error('Canvas context unavailable');
 
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, '#120c2f');
-      gradient.addColorStop(0.55, '#2a1458');
-      gradient.addColorStop(1, '#0f172a');
+      gradient.addColorStop(0, '#05030b');
+      gradient.addColorStop(0.55, '#11071d');
+      gradient.addColorStop(1, '#1a0d2c');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -478,11 +366,11 @@ const App: React.FC = () => {
       ctx.fillStyle = 'rgba(255,255,255,0.08)';
       ctx.fillRect(60, 60, canvas.width - 120, canvas.height - 120);
 
-      ctx.strokeStyle = 'rgba(216,180,254,0.35)';
+      ctx.strokeStyle = 'rgba(214,179,106,0.45)';
       ctx.lineWidth = 2;
       ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
 
-      ctx.fillStyle = '#fde68a';
+      ctx.fillStyle = '#f0d48a';
       ctx.font = 'bold 34px serif';
       ctx.textAlign = 'center';
       ctx.fillText('Starot Reading Card', canvas.width / 2, 150);
@@ -508,12 +396,12 @@ const App: React.FC = () => {
         const x = startX + col * (cardBoxWidth + gap);
         const y = startY + row * (cardBoxHeight + gap);
 
-        ctx.fillStyle = 'rgba(15,23,42,0.55)';
+        ctx.fillStyle = 'rgba(13,7,24,0.6)';
         ctx.fillRect(x, y, cardBoxWidth, cardBoxHeight);
-        ctx.strokeStyle = 'rgba(192,132,252,0.45)';
+        ctx.strokeStyle = 'rgba(214,179,106,0.4)';
         ctx.strokeRect(x, y, cardBoxWidth, cardBoxHeight);
 
-        ctx.fillStyle = '#c4b5fd';
+        ctx.fillStyle = '#d6b36a';
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(currentReadingConfig.stepLabels[index] || card.position, x + 16, y + 30);
@@ -523,12 +411,12 @@ const App: React.FC = () => {
         const cardTitle = card.nameKo.length > 12 ? `${card.nameKo.slice(0, 12)}...` : card.nameKo;
         ctx.fillText(cardTitle, x + 16, y + 68);
 
-        ctx.fillStyle = card.isReversed ? '#fca5a5' : '#86efac';
+        ctx.fillStyle = card.isReversed ? 'rgba(231,222,248,0.75)' : '#f0d48a';
         ctx.font = '18px sans-serif';
         ctx.fillText(card.isReversed ? '역방향' : '정방향', x + 16, y + 104);
       });
 
-      ctx.fillStyle = '#fde68a';
+      ctx.fillStyle = '#f0d48a';
       ctx.font = 'bold 30px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('한 줄 조언', 120, 735);
@@ -560,11 +448,10 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen relative flex flex-col items-center overflow-x-hidden font-sans">
-      <style>{animationStyles}</style>
-      <BackgroundStars />
-      <button 
+      <AtelierBackground />
+      <button
         onClick={toggleMute}
-        className="fixed top-6 right-6 z-[9999] p-3 rounded-full bg-slate-800 border-2 border-white/30 hover:border-white text-white shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:scale-110 transition-all cursor-pointer"
+        className="fixed top-6 right-6 z-[9999] p-3 rounded-full border border-white/15 bg-white/10 backdrop-blur-md text-[#efe7ff] hover:bg-white/15 hover:border-[#d6b36a]/50 transition-all cursor-pointer"
         title={isMuted ? "소리 켜기" : "소리 끄기"}
       >
         {isMuted ? (
@@ -573,7 +460,7 @@ const App: React.FC = () => {
            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
         )}
       </button>
-      <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col items-center min-h-screen p-4 md:p-8">
+      <div className={`relative z-10 w-full mx-auto flex flex-col items-center min-h-screen ${isIdle ? '' : 'max-w-6xl p-4 md:p-8'}`}>
         {isIdle ? (
           <LandingScreen
             question={question}
@@ -584,36 +471,33 @@ const App: React.FC = () => {
           />
         ) : (
           <>
-            <header className={`transition-all duration-700 z-50 ${isIdle ? 'mt-8 mb-4' : 'mt-4 mb-4 scale-90'}`}>
-              <div className="bg-purple-600/30 backdrop-blur-md border border-purple-400/30 rounded-full px-6 py-1 shadow-lg inline-block mb-3 animate-fade-in-up mx-auto block w-fit">
-                <p className="text-yellow-200 font-bold text-xs md:text-sm tracking-widest drop-shadow-md text-center">별처럼 빛나는 당신의 미래를 위한</p>
-              </div>
-              <h1 className="font-display text-4xl md:text-6xl text-white font-extrabold text-center tracking-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-                <span className="bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-yellow-100 to-white drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)]">Starot</span>
+            <header className="mt-5 mb-4 z-50 text-center">
+              <p className="text-[9px] md:text-[11px] tracking-[0.4em] uppercase text-[#c8b27a]/90 mb-2 animate-fade-in-up">Tarot for modern rituals</p>
+              <h1 className="font-display text-4xl md:text-5xl text-[#fff7e8] tracking-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                Starot
               </h1>
             </header>
           </>
         )}
         {isSelectingPhase && revealedCards.length < targetCardCount && (
           <div className="flex flex-col items-center animate-fade-in-up w-full flex-1 justify-center z-20 relative">
-            {isShuffling && <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"><div className="bg-black/60 backdrop-blur-md px-8 py-4 rounded-full border border-purple-500/50 shadow-[0_0_40px_rgba(168,85,247,0.6)] animate-pulse"><span className="text-white font-display font-bold tracking-widest text-xl md:text-2xl drop-shadow-lg">🔮 셔플 중...</span></div></div>}
-            {/* Fixed Text Visibility: Removed text-transparent and bg-clip-text */}
-            <h2 className="text-xl md:text-3xl text-white mb-12 font-display text-center drop-shadow-lg min-h-[3rem] flex items-center justify-center">
+            {isShuffling && <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"><div className="border border-[#d6b36a]/35 bg-[#0b0616]/85 backdrop-blur-md px-8 py-4 rounded-full shadow-[0_0_40px_rgba(214,179,106,0.25)] animate-pulse"><span className="text-[#f6e8bf] font-display tracking-[0.35em] text-lg md:text-xl">셔플 중 ···</span></div></div>}
+            <h2 className="mb-10 text-center min-h-[3rem] flex items-center justify-center">
               {renderInstructionText()}
             </h2>
             <div className="w-full overflow-x-auto no-scrollbar py-10 px-4">
-              <div className="flex justify-center min-w-max px-10 perspective-1000 transition-all duration-500">
+              <div className="flex justify-center min-w-max px-10 transition-all duration-500">
                  {deckCards.map((id, index) => {
                    const cardClass = isShuffling ? "-ml-14 md:-ml-20 scale-90 animate-shuffle-shake cursor-not-allowed opacity-60 blur-[2px] brightness-75" : "-ml-8 md:-ml-12 hover:-translate-y-12 hover:scale-110 hover:rotate-3 hover:z-50 cursor-pointer";
                    return (
                      <div key={id} onClick={() => !isShuffling && handleCardPick(id)} className={`relative w-16 h-28 md:w-24 md:h-40 first:ml-0 transition-all duration-500 ease-out group transform-gpu ${cardClass}`} style={{ zIndex: index }}>
-                       <div className="w-full h-full rounded-lg bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 border border-purple-400/40 shadow-xl group-hover:shadow-purple-500/60 overflow-hidden"><div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div><div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 rounded-full border border-purple-300/20 group-hover:border-purple-300/60 transition-colors"></div></div></div>
+                       <div className="w-full h-full rounded-lg bg-[linear-gradient(180deg,#241536,#0d0718)] border border-[#d6b36a]/25 shadow-xl group-hover:border-[#d6b36a]/70 group-hover:shadow-[0_12px_32px_rgba(214,179,106,0.22)] overflow-hidden"><div className="absolute inset-1 rounded-md border border-white/10"></div><div className="absolute inset-0 flex items-center justify-center"><span className="text-[#d6b36a]/45 group-hover:text-[#f0d48a] text-lg transition-colors">✦</span></div></div>
                      </div>
                    );
                  })}
               </div>
             </div>
-            <p className="text-purple-300/60 text-sm mt-8 animate-pulse">카드를 클릭하여 운명을 확인하세요</p>
+            <p className="text-[#cdb682]/70 text-sm mt-8 tracking-wide animate-pulse">카드를 클릭하여 운명을 확인하세요</p>
           </div>
         )}
         {(state === ReadingState.DRAWING || showResults) && (
@@ -623,39 +507,38 @@ const App: React.FC = () => {
                   const card = revealedCards[index];
                   return (
                     <div key={index} className="flex flex-col items-center">
-                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border-2 border-dashed border-purple-500/20 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'animate-pulse border-purple-400/50 shadow-[0_0_20px_rgba(168,85,247,0.15)]' : ''}`}><span className="text-purple-400/50 text-sm font-bold tracking-widest">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={index * 200} />}
+                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'border-[#d6b36a]/50 shadow-[0_0_24px_rgba(214,179,106,0.14)] animate-pulse' : ''}`}><span className="text-[#cdb682]/60 text-xs font-semibold tracking-[0.25em] uppercase">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={index * 200} />}
                     </div>
                   );
                })}
              </div>
-             {revealedCards.length === targetCardCount && !showResults && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-purple-200 font-display text-lg">별들이 당신의 운명을 속삭이고 있습니다...</p></div>}
+             {revealedCards.length === targetCardCount && !showResults && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-10 h-10 border-2 border-[#d6b36a] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-[#e7def8]/85 font-display text-lg tracking-wide">별들이 당신의 운명을 속삭이고 있습니다 ···</p></div>}
              {showResults && reading && (
-                <div className="w-full max-w-4xl bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 md:p-10 border border-purple-500/30 shadow-[0_0_50px_rgba(76,29,149,0.3)] animate-fade-in-up mb-20 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
-                  <div className="text-center mb-10"><span className="text-purple-400 text-xs font-bold tracking-widest uppercase mb-2 block">Your Question</span><h2 className="text-2xl md:text-3xl text-white font-display leading-tight">"{question}"</h2></div>
+                <div className="w-full max-w-4xl bg-[linear-gradient(180deg,rgba(16,10,29,0.88),rgba(10,6,18,0.92))] backdrop-blur-xl rounded-[2rem] p-6 md:p-10 border border-white/12 shadow-[0_30px_90px_rgba(0,0,0,0.45)] animate-fade-in-up mb-20 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#d6b36a]/70 to-transparent"></div>
+                  <div className="text-center mb-10"><span className="text-[#cdb682] text-[10px] md:text-xs font-semibold tracking-[0.3em] uppercase mb-3 block">Your Question</span><h2 className="text-2xl md:text-3xl text-[#fff7e8] font-display leading-tight">"{question}"</h2></div>
                   <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 mb-12">
                     <Section title={currentReadingConfig.sectionTitles[0]} readingContent={reading.pastReading} cardMeaning={reading.pastCardMeaning} />
                     <Section title={currentReadingConfig.sectionTitles[1]} readingContent={reading.presentReading} cardMeaning={reading.presentCardMeaning} />
                     <Section title={currentReadingConfig.sectionTitles[2]} readingContent={reading.futureReading} cardMeaning={reading.futureCardMeaning} />
                     <Section title={currentReadingConfig.sectionTitles[3]} readingContent={reading.adviceReading} cardMeaning={reading.adviceCardMeaning} />
                   </div>
-                  <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 rounded-2xl p-6 md:p-8 border border-white/10 relative">
-                    <h3 className="text-xl font-bold text-yellow-200 mb-4 flex items-center gap-2"><span>✨</span> 종합 해석</h3>
-                    <p className="text-gray-100 leading-relaxed mb-6 whitespace-pre-line text-lg font-light">{reading.summary}</p>
-                    <div className="bg-black/20 rounded-xl p-4 border-l-4 border-yellow-400"><p className="text-lg font-medium text-white italic">"{reading.oneLineAdvice}"</p></div>
+                  <div className="rounded-[1.4rem] p-6 md:p-8 border border-[#d6b36a]/20 bg-[radial-gradient(circle_at_top,rgba(214,179,106,0.12),transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] relative">
+                    <h3 className="text-lg md:text-xl mb-4 flex items-center gap-2 font-display text-[#f0dca4] tracking-wide"><span className="text-[#f0d48a]">✦</span> 종합 해석</h3>
+                    <p className="text-[#ece3ff]/95 leading-relaxed mb-6 whitespace-pre-line text-base md:text-lg font-light">{reading.summary}</p>
+                    <div className="bg-[#090512]/60 rounded-xl p-4 border-l-2 border-[#d6b36a]"><p className="text-lg font-medium text-[#fff7e8] italic">"{reading.oneLineAdvice}"</p></div>
                     <div className="mt-8 flex justify-end items-center gap-4 flex-wrap border-t border-white/10 pt-4">
-                      <button onClick={downloadShareCard} disabled={isExportingShareCard} className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-bold transition-all shadow-lg disabled:opacity-60 disabled:cursor-wait">
-                        <span>✨</span>
-                        {isExportingShareCard ? '공유 카드 생성 중...' : '공유 카드 저장'}
+                      <button onClick={downloadShareCard} disabled={isExportingShareCard} className="inline-flex items-center gap-2 rounded-full border border-[#f0d48a]/40 bg-[#f1d18a] px-6 py-3 text-sm md:text-base font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)] disabled:opacity-60 disabled:cursor-wait">
+                        {isExportingShareCard ? '공유 카드 생성 중 ···' : '공유 카드 저장'}
                       </button>
                     </div>
                   </div>
-                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); setState(ReadingState.IDLE); }} className="text-purple-300 hover:text-white transition-colors border-b border-purple-500/30 hover:border-purple-300 pb-1 text-sm uppercase tracking-widest">다른 질문 하기</button></div>
+                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); setState(ReadingState.IDLE); }} className="text-[#cdb682] hover:text-[#fff7e8] transition-colors border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 text-xs md:text-sm uppercase tracking-[0.25em]">다른 질문 하기</button></div>
                 </div>
              )}
           </div>
         )}
-        {state === ReadingState.ERROR && <div className="text-center text-red-300 bg-red-900/20 p-6 rounded-xl mt-8 border border-red-500/30 backdrop-blur-md"><p>별들의 신호를 수신하는데 실패했습니다.</p><button onClick={() => setState(ReadingState.IDLE)} className="mt-4 text-sm underline">다시 시도하기</button></div>}
+        {state === ReadingState.ERROR && <div className="text-center p-8 rounded-[1.4rem] mt-12 border border-white/12 bg-white/5 backdrop-blur-md max-w-md"><p className="text-[#f3c8c8]">별들의 신호를 수신하는데 실패했습니다.</p><button onClick={() => setState(ReadingState.IDLE)} className="mt-4 text-xs uppercase tracking-[0.25em] text-[#cdb682] hover:text-[#fff7e8] border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 transition-colors">다시 시도하기</button></div>}
       </div>
     </div>
   );
@@ -665,11 +548,11 @@ const Section: React.FC<{title: string, readingContent: string, cardMeaning: str
   const [isOpen, setIsOpen] = useState(false);
   return (
     <div className="group flex flex-col h-full">
-      <h4 className="text-purple-300 font-bold mb-3 text-xs uppercase tracking-widest border-l-2 border-purple-500 pl-3 group-hover:border-yellow-400 transition-colors">{title}</h4>
-      <p className="text-gray-100 text-sm md:text-base leading-7 font-light mb-4 flex-grow font-sans">{readingContent}</p>
+      <h4 className="text-[#f0dca4] font-semibold mb-3 text-[11px] uppercase tracking-[0.22em] border-l-2 border-[#d6b36a]/60 pl-3 group-hover:border-[#f0d48a] transition-colors">{title}</h4>
+      <p className="text-[#ece3ff]/95 text-sm md:text-base leading-7 font-light mb-4 flex-grow font-sans">{readingContent}</p>
       <div className="mt-auto border-t border-white/5 pt-2">
-        <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-1 text-xs text-purple-400/70 hover:text-purple-300 transition-colors focus:outline-none"><span>{isOpen ? '카드 상세 설명 접기' : '카드 상세 설명 보기'}</span><svg className={`w-3 h-3 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
-        {isOpen && <div className="mt-2 text-xs text-gray-400 bg-black/20 p-3 rounded-lg border border-white/5 italic animate-fade-in-up font-sans">{cardMeaning}</div>}
+        <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-1 text-xs text-[#cdb682]/80 hover:text-[#f0d48a] transition-colors focus:outline-none"><span>{isOpen ? '카드 상세 설명 접기' : '카드 상세 설명 보기'}</span><svg className={`w-3 h-3 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
+        {isOpen && <div className="mt-2 text-xs text-[#c9bfe4]/80 bg-[#090512]/50 p-3 rounded-lg border border-white/5 italic animate-fade-in-up font-sans">{cardMeaning}</div>}
       </div>
     </div>
   );

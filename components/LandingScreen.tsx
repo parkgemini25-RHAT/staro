@@ -16,13 +16,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   onFillExample,
 }) => {
   return (
-    <section className="relative isolate min-h-screen overflow-hidden px-4 py-4 sm:px-8 sm:py-6 lg:px-12">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(215,182,103,0.18),transparent_30%),radial-gradient(circle_at_20%_20%,rgba(140,98,255,0.16),transparent_28%),linear-gradient(180deg,#05030b_0%,#11071d_42%,#1a0d2c_100%)]" />
-      <div className="absolute inset-0 opacity-40 mix-blend-screen [background-image:radial-gradient(circle_at_1px_1px,rgba(255,248,220,0.55)_1px,transparent_0)] [background-size:26px_26px]" />
-      <div className="absolute left-[-8%] top-[12%] h-64 w-64 rounded-full bg-[#7c3aed]/20 blur-3xl" />
-      <div className="absolute right-[-6%] top-[8%] h-72 w-72 rounded-full bg-[#f59e0b]/15 blur-3xl" />
-      <div className="absolute bottom-[-10%] left-1/2 h-72 w-[34rem] -translate-x-1/2 rounded-full bg-[#ec4899]/12 blur-3xl" />
-
+    <section className="relative isolate min-h-screen w-full overflow-hidden px-4 py-4 sm:px-8 sm:py-6 lg:px-12">
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl items-start sm:items-center">
         <div className="grid w-full gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10">
           <div className="order-1 animate-fade-in-up lg:order-1">
