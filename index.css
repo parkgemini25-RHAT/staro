@@ -1,5 +1,76 @@
 @import 'tailwindcss';
 
+/* ---------------------------------------------------------------------------
+   Design tokens — semantic names backed by CSS variables.
+   Starot values are IDENTICAL to the previous hardcoded hex values
+   (value-preserving refactor); tangttung overrides them at runtime
+   via [data-theme] without touching any component code.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-accent: #d6b36a;        /* 골드 라인/포인트 */
+  --color-accent-hi: #f0d48a;     /* 밝은 골드 */
+  --color-accent-soft: #f6e8bf;   /* 골드 텍스트(밝음) */
+  --color-accent-muted: #cdb682;  /* 골드 텍스트(낮음) */
+  --color-ink-hi: #fff7e8;        /* 제목 아이보리 */
+  --color-ink: #ece3ff;           /* 본문 라벤더 */
+  --color-ink-dim: #c9bfe4;
+  --color-ink-faint: #9f96b8;
+  --color-line: #ffffff;          /* 헤어라인(저불투명 사용) */
+  --color-glass: #ffffff;         /* 유리 패널(저불투명 사용) */
+  --color-surface: #0d0718;       /* 카드/입력 표면 */
+  --color-surface-deep: #090512;
+  --color-cta: #f1d18a;
+  --color-cta-ink: #1d1029;
+  --color-bg0: #05030b;
+}
+
+:root {
+  --font-display-stack: 'Marcellus', serif;
+  --panel-top: rgba(16, 10, 29, 0.88);
+  --panel-bottom: rgba(10, 6, 18, 0.92);
+  --panel-top-strong: rgba(16, 10, 29, 0.94);
+  --panel-bottom-strong: rgba(10, 6, 18, 0.96);
+  --scroll-track: #1a1a2e;
+  --scroll-thumb: #4c1d95;
+  --scroll-thumb-hover: #6d28d9;
+}
+
+/* ── 얼렁탕뚱: 삽살개 탕뚱이의 따뜻한 크림 테마 ─────────────────────── */
+:root[data-theme='tangttung'] {
+  --color-accent: #c98d5e;
+  --color-accent-hi: #b06f3e;
+  --color-accent-soft: #7c5535;
+  --color-accent-muted: #96714f;
+  --color-ink-hi: #3f2c1e;
+  --color-ink: #5b4331;
+  --color-ink-dim: #8a6f5a;
+  --color-ink-faint: #b39a85;
+  --color-line: #c98d5e;
+  --color-glass: #ffffff;
+  --color-surface: #fff6ea;
+  --color-surface-deep: #ffefdc;
+  --color-cta: #f2a96a;
+  --color-cta-ink: #3f2413;
+  --color-bg0: #fdf3e7;
+
+  --font-display-stack: 'Jua', 'Pretendard', sans-serif;
+  --panel-top: rgba(255, 251, 244, 0.9);
+  --panel-bottom: rgba(255, 241, 224, 0.94);
+  --panel-top-strong: rgba(255, 252, 246, 0.96);
+  --panel-bottom-strong: rgba(255, 243, 228, 0.97);
+  --scroll-track: #f3e3cf;
+  --scroll-thumb: #d9a878;
+  --scroll-thumb-hover: #c98d5e;
+}
+
+/* 테마 공용 유리 패널 (기존 하드코딩 그라디언트와 동일한 Starot 값) */
+.panel-glass {
+  background-image: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+}
+.panel-glass-strong {
+  background-image: linear-gradient(180deg, var(--panel-top-strong), var(--panel-bottom-strong));
+}
+
 body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto,
     'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic',
@@ -9,7 +80,7 @@ body {
 }
 
 .font-display {
-  font-family: 'Marcellus', serif;
+  font-family: var(--font-display-stack);
 }
 
 .font-serif {
@@ -21,14 +92,14 @@ body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #1a1a2e;
+  background: var(--scroll-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #4c1d95;
+  background: var(--scroll-thumb);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #6d28d9;
+  background: var(--scroll-thumb-hover);
 }
 
 /* Starry Background */

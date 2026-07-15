@@ -5,6 +5,7 @@ export const getTarotReading = async (
   question: string,
   cards: DrawnCard[],
   readingTypeLabel: string = '기본 흐름',
+  persona: string = 'starot',
 ): Promise<ReadingResponse> => {
   const response = await fetch('/api/reading', {
     method: 'POST',
@@ -17,6 +18,7 @@ export const getTarotReading = async (
         isReversed: c.isReversed,
       })),
       readingTypeLabel,
+      persona,
     }),
   });
 

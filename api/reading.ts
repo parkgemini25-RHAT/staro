@@ -8,8 +8,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { question, cards, readingTypeLabel } = validateReadingRequest(req.body);
-    const result = await generateReading(process.env.GEMINI_API_KEY, question, cards, readingTypeLabel);
+    const { question, cards, readingTypeLabel, persona } = validateReadingRequest(req.body);
+    const result = await generateReading(process.env.GEMINI_API_KEY, question, cards, readingTypeLabel, persona);
     res.status(200).json(result);
   } catch (error) {
     if (error instanceof ReadingRequestError) {

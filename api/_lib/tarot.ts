@@ -54,8 +54,10 @@ const readingSchema: Schema = {
 
 const VALID_POSITIONS = new Set(['past', 'present', 'future', 'advice']);
 
-export const validateReadingRequest = (body: unknown): { question: string; cards: ReadingCardInput[]; readingTypeLabel: string } => {
-  const { question, cards, readingTypeLabel } = (body ?? {}) as Record<string, unknown>;
+export type ReadingPersona = 'starot' | 'tangttung';
+
+export const validateReadingRequest = (body: unknown): { question: string; cards: ReadingCardInput[]; readingTypeLabel: string; persona: ReadingPersona } => {
+  const { question, cards, readingTypeLabel, persona } = (body ?? {}) as Record<string, unknown>;
 
   if (typeof question !== 'string' || !question.trim()) {
     throw new ReadingRequestError('question is required');
@@ -81,8 +83,9 @@ export const validateReadingRequest = (body: unknown): { question: string; cards
     };
   });
   const label = typeof readingTypeLabel === 'string' && readingTypeLabel.length <= 30 ? readingTypeLabel : '기본 흐름';
+  const parsedPersona: ReadingPersona = persona === 'tangttung' ? 'tangttung' : 'starot';
 
-  return { question: question.trim(), cards: parsedCards, readingTypeLabel: label };
+  return { question: question.trim(), cards: parsedCards, readingTypeLabel: label, persona: parsedPersona };
 };
 
 // Dev-only mock so the full flow can be exercised without an API key.
@@ -109,11 +112,21 @@ export const generateMockReading = (question: string, cards: ReadingCardInput[])
   };
 };
 
+// 얼렁탕뚱 페르소나: 액운을 쫓는 삽살개 탕뚱이가 곁에서 봐주는 다정한 톤
+const TANGTTUNG_TONE = `
+    PERSONA OVERRIDE (얼렁탕뚱 테마):
+    - 당신은 "탕뚱이"라는 삽살개 수호견과 함께 카드를 봐주는 다정한 리더입니다.
+    - 존댓말을 유지하되 훨씬 따뜻하고 귀엽고 포근한 말투를 사용하세요.
+    - 가끔(전체에서 2~3회만) 탕뚱이를 자연스럽게 언급하세요. 예: "탕뚱이가 꼬리를 흔드는 걸 보니...", "이 카드는 탕뚱이가 조심스럽게 물어왔네요."
+    - 이모지는 사용하지 마세요. 유치하지 않게, 위로와 응원이 느껴지게.
+    - 삽살개는 액운을 쫓는 수호견입니다. 나쁜 카드도 "탕뚱이가 곁을 지켜주니" 식으로 부드럽게 감싸주세요.`;
+
 export const generateReading = async (
   apiKey: string | undefined,
   question: string,
   cards: ReadingCardInput[],
   readingTypeLabel: string,
+  persona: ReadingPersona = 'starot',
 ): Promise<ReadingResult> => {
   if (!apiKey) {
     throw new ReadingRequestError('GEMINI_API_KEY is not configured on the server', 500);
@@ -151,6 +164,7 @@ export const generateReading = async (
     3. **General Rules**:
        - Tone: Polite (존댓말), empathetic, mystical but practical.
        - Analyze the flow from Past -> Present -> Future.
+    ${persona === 'tangttung' ? TANGTTUNG_TONE : ''}
 
     Return the result STRICTLY in JSON format matching the schema.
   `;

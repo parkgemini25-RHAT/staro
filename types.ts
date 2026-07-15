@@ -32,6 +32,8 @@ export interface ReadingResponse {
 }
 
 export interface SavedReading {
+  /** 어떤 덱(테마)으로 본 리딩인지 — 미기록이면 starot */
+  deck?: string;
   id: string;
   question: string;
   readingType: string;

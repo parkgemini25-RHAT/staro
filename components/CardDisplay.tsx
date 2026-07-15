@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { DrawnCard } from '../types';
-import { getCardImagePath, CARD_BACK_PATH } from '../utils/cardAssets';
+import { getCardImagePath, getCardBackPath } from '../utils/cardAssets';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CardDisplayProps {
   card: DrawnCard & { deckId?: number };
@@ -12,6 +13,7 @@ interface CardDisplayProps {
 // Interactive holographic card, technique borrowed from simeydotme/pokemon-cards-css:
 // pointer position drives CSS custom properties for 3D tilt, foil shine and glare.
 const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
+  const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const tiltRef = useRef<HTMLDivElement>(null);
@@ -23,7 +25,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
     advice: '조언 (Advice)'
   };
 
-  const imageUrl = getCardImagePath(card);
+  const imageUrl = getCardImagePath(card, theme);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = tiltRef.current;
@@ -55,7 +57,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
   return (
     <div className="flex flex-col items-center">
       <div
-        className="text-[10px] uppercase tracking-[0.25em] text-[#cdb682] mb-2 font-semibold animate-fade-in-up"
+        className="text-[10px] uppercase tracking-[0.25em] text-accent-muted mb-2 font-semibold animate-fade-in-up"
         style={{ animationDelay: `${delay}ms`, animationFillMode: 'both' }}
       >
         {positionLabels[card.position]}
@@ -72,8 +74,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
         <div className="holo-flip w-full h-full" style={{ animationDelay: `${delay}ms` }}>
 
           {/* Back face (visible during flip-in) */}
-          <div className="holo-face holo-back rounded-xl overflow-hidden border border-[#d6b36a]/30 bg-[#0d0718] shadow-2xl">
-            <img src={CARD_BACK_PATH} alt="card back" className="w-full h-full object-cover" />
+          <div className="holo-face holo-back rounded-xl overflow-hidden border border-accent/30 bg-surface shadow-2xl">
+            <img src={getCardBackPath(theme)} alt="card back" className="w-full h-full object-cover" />
           </div>
 
           {/* Front face */}
@@ -84,20 +86,20 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
               onPointerMove={handlePointerMove}
               onPointerLeave={handlePointerLeave}
             >
-              <div className="w-full h-full rounded-xl overflow-hidden border border-[#d6b36a]/30 bg-[#0d0718] relative shadow-2xl">
+              <div className="w-full h-full rounded-xl overflow-hidden border border-accent/30 bg-surface relative shadow-2xl">
 
                 {/* Fallback placeholder (if the local image fails) */}
                 {hasError && (
-                  <div className="absolute inset-0 bg-[#0d0718] flex flex-col items-center justify-center p-2 text-center">
-                    <span className="text-[#d6b36a]/50 text-3xl mb-2">✦</span>
-                    <span className="text-xs text-[#cdb682]/70">{card.name}</span>
+                  <div className="absolute inset-0 bg-surface flex flex-col items-center justify-center p-2 text-center">
+                    <span className="text-accent/50 text-3xl mb-2">✦</span>
+                    <span className="text-xs text-accent-muted/70">{card.name}</span>
                   </div>
                 )}
 
                 {/* Loading overlay */}
                 {isLoading && !hasError && (
-                  <div className="absolute inset-0 z-50 bg-[#0d0718]/85 flex items-center justify-center">
-                    <div className="w-8 h-8 border-2 border-[#d6b36a] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 z-50 bg-surface/85 flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
                   </div>
                 )}
 
@@ -108,7 +110,18 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
                     alt={card.name}
                     className={`relative w-full h-full object-cover z-10 transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
                     onLoad={() => { setIsLoading(false); setHasError(false); }}
-                    onError={() => { console.error(`Image failed to load: ${imageUrl}`); setIsLoading(false); setHasError(true); }}
+                    onError={(e) => {
+                      // 테마 덱에 아직 없는 카드는 starot 원본 아트로 폴백
+                      const img = e.target as HTMLImageElement;
+                      if (theme !== 'starot' && !img.dataset.fallback) {
+                        img.dataset.fallback = '1';
+                        img.src = getCardImagePath(card, 'starot');
+                        return;
+                      }
+                      console.error(`Image failed to load: ${imageUrl}`);
+                      setIsLoading(false);
+                      setHasError(true);
+                    }}
                   />
                 )}
 
@@ -129,8 +142,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
         className="mt-3 text-center animate-fade-in-up"
         style={{ animationDelay: `${delay + 250}ms`, animationFillMode: 'both' }}
       >
-        <p className="text-sm text-[#fff7e8] font-medium font-display tracking-wide">{card.name}</p>
-        <span className={`text-[10px] tracking-[0.18em] uppercase font-medium px-2.5 py-0.5 rounded-full mt-1.5 inline-block border ${card.isReversed ? 'border-white/20 text-[#e7def8]/70' : 'border-[#d6b36a]/40 text-[#f0d48a]'}`}>
+        <p className="text-sm text-ink-hi font-medium font-display tracking-wide">{card.name}</p>
+        <span className={`text-[10px] tracking-[0.18em] uppercase font-medium px-2.5 py-0.5 rounded-full mt-1.5 inline-block border ${card.isReversed ? 'border-line/20 text-ink/70' : 'border-accent/40 text-accent-hi'}`}>
           {card.isReversed ? 'Reversed' : 'Upright'}
         </span>
       </div>

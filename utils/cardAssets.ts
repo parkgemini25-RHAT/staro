@@ -1,18 +1,33 @@
 import { TarotCard } from '../types';
 
+// ── 덱/테마 ──────────────────────────────────────────────────────────
+// 기능 코드는 공유하고, 덱 이미지와 디자인 토큰·카피만 테마로 갈아끼운다.
+export type ThemeId = 'starot' | 'tangttung';
+
+export const DEFAULT_THEME: ThemeId = 'starot';
+
+export const DECKS: Record<ThemeId, { name: string; dir: string }> = {
+  starot: { name: 'Starot', dir: '/decks/starot' },
+  tangttung: { name: '얼렁탕뚱', dir: '/decks/tangttung' },
+};
+
 const COURT_RANKS: Record<string, number> = { Page: 11, Knight: 12, Queen: 13, King: 14 };
 
-// Maps a card to its bundled image in public/cards/ (major-00.png, wands-01.png, ...)
-export const getCardImagePath = (card: TarotCard): string => {
+const cardFileName = (card: TarotCard): string => {
   if (card.arcana === 'Major') {
-    return `/cards/major-${(card.number as number).toString().padStart(2, '0')}.png`;
+    return `major-${(card.number as number).toString().padStart(2, '0')}.png`;
   }
   const suit = (card.suit || '').toLowerCase();
   const rank = typeof card.number === 'number' ? card.number : COURT_RANKS[card.number as string] || 0;
-  return `/cards/${suit}-${rank.toString().padStart(2, '0')}.png`;
+  return `${suit}-${rank.toString().padStart(2, '0')}.png`;
 };
 
-export const CARD_BACK_PATH = '/cards/back.png';
+// Maps a card to its bundled image (major-00.png, wands-01.png, ...)
+export const getCardImagePath = (card: TarotCard, theme: ThemeId = DEFAULT_THEME): string =>
+  `${DECKS[theme].dir}/${cardFileName(card)}`;
+
+export const getCardBackPath = (theme: ThemeId = DEFAULT_THEME): string =>
+  `${DECKS[theme].dir}/back.png`;
 
 // Holo rarity tiers (pokemon-cards-css style), mapped to tarot hierarchy:
 // Major Arcana → galaxy (rainbow secret), Court/Ace → foil (regular holo), pips → glossy

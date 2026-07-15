@@ -25,7 +25,7 @@ const readingApiDevPlugin = (apiKey: string | undefined): Plugin => ({
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 
         const tarot = (await server.ssrLoadModule('/api/_lib/tarot.ts')) as typeof import('./api/_lib/tarot');
-        const { question, cards, readingTypeLabel } = tarot.validateReadingRequest(body);
+        const { question, cards, readingTypeLabel, persona } = tarot.validateReadingRequest(body);
 
         if (!apiKey) {
           // Dev-only mock mode: exercise the full flow without an API key.
@@ -37,7 +37,7 @@ const readingApiDevPlugin = (apiKey: string | undefined): Plugin => ({
         }
 
         try {
-          const result = await tarot.generateReading(apiKey, question, cards, readingTypeLabel);
+          const result = await tarot.generateReading(apiKey, question, cards, readingTypeLabel, persona);
           respond(200, result);
         } catch (error: any) {
           // Dev nicety: fall back to the mock when the free-tier quota runs out (429)

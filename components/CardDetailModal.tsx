@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { DrawnCard } from '../types';
 import { getCardImagePath, getCardRarity } from '../utils/cardAssets';
 import { getCardMeaning, getCardDetail } from '../constants/cardMeanings';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CardDetailModalProps {
   card: DrawnCard;
@@ -16,10 +17,11 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
   const pkcRef = useRef<HTMLDivElement>(null);
   const [isInteracting, setIsInteracting] = useState(false);
 
+  const { theme } = useTheme();
   const rarity = getCardRarity(card);
   const meaning = getCardMeaning(card.name);
   const detail = getCardDetail(card.name);
-  const imageUrl = getCardImagePath(card);
+  const imageUrl = getCardImagePath(card, theme);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -79,13 +81,13 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 220, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl my-auto rounded-[1.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(16,10,29,0.94),rgba(10,6,18,0.96))] p-5 md:p-8 shadow-[0_40px_120px_rgba(0,0,0,0.6)]"
+        className="relative w-full max-w-4xl my-auto rounded-[1.6rem] border border-line/12 panel-glass-strong p-5 md:p-8 shadow-[0_40px_120px_rgba(0,0,0,0.6)]"
       >
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#d6b36a]/70 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
         <button
           onClick={onClose}
           aria-label="닫기"
-          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/8 text-[#cdb682] transition hover:border-[#d6b36a]/50 hover:text-[#fff7e8]"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-line/15 bg-glass/8 text-accent-muted transition hover:border-accent/50 hover:text-ink-hi"
         >
           ✕
         </button>
@@ -105,6 +107,13 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
                   src={imageUrl}
                   alt={card.name}
                   draggable={false}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    if (theme !== 'starot' && !img.dataset.fallback) {
+                      img.dataset.fallback = '1';
+                      img.src = getCardImagePath(card, 'starot');
+                    }
+                  }}
                   className={`h-full w-full object-cover ${card.isReversed ? 'rotate-180' : ''}`}
                 />
                 <div className="pkc__shine" />
@@ -117,52 +126,52 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
           {/* Right: card explanation (instant, from local data) */}
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[#d6b36a]/35 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f3d98b]">
+              <span className="rounded-full border border-accent/35 bg-glass/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-accent-soft">
                 {positionLabel}
               </span>
-              <span className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${card.isReversed ? 'border-white/20 text-[#e7def8]/75' : 'border-[#d6b36a]/40 text-[#f0d48a]'}`}>
+              <span className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${card.isReversed ? 'border-line/20 text-ink/75' : 'border-accent/40 text-accent-hi'}`}>
                 {card.isReversed ? 'Reversed · 역방향' : 'Upright · 정방향'}
               </span>
             </div>
 
-            <h2 className="mt-4 font-display text-3xl md:text-4xl text-[#fff7e8]">{card.name}</h2>
-            <p className="mt-1 text-sm text-[#cdb682]">
+            <h2 className="mt-4 font-display text-3xl md:text-4xl text-ink-hi">{card.name}</h2>
+            <p className="mt-1 text-sm text-accent-muted">
               {card.nameKo}
-              {detail && <span className="ml-2 text-[#9f96b8]">· {detail.element}</span>}
+              {detail && <span className="ml-2 text-ink-faint">· {detail.element}</span>}
             </p>
 
             {meaning ? (
               <>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {meaning.keywords.map((kw) => (
-                    <span key={kw} className="rounded-full bg-[#f0d48a]/10 border border-[#d6b36a]/20 px-3 py-1 text-xs text-[#efe4bf]">
+                    <span key={kw} className="rounded-full bg-accent-hi/10 border border-accent/20 px-3 py-1 text-xs text-accent-soft">
                       {kw}
                     </span>
                   ))}
                 </div>
 
-                <p className="mt-4 text-sm leading-6 text-[#c9bfe4]/90">{meaning.symbol}</p>
+                <p className="mt-4 text-sm leading-6 text-ink-dim/90">{meaning.symbol}</p>
 
                 {detail && (
-                  <div className="mt-4 rounded-[1rem] border border-white/10 bg-white/4 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#cdb682] mb-1.5">심층 해설</p>
-                    <p className="text-sm leading-6 text-[#ece3ff]/92">{detail.detail}</p>
+                  <div className="mt-4 rounded-[1rem] border border-line/10 bg-glass/4 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent-muted mb-1.5">심층 해설</p>
+                    <p className="text-sm leading-6 text-ink/92">{detail.detail}</p>
                   </div>
                 )}
 
                 <div className="mt-4 space-y-3">
-                  <div className={`rounded-[1rem] border p-4 transition ${!card.isReversed ? 'border-[#d6b36a]/40 bg-[#f0d48a]/8' : 'border-white/8 bg-white/3 opacity-55'}`}>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f0d48a] mb-1.5">정방향</p>
-                    <p className="text-sm leading-6 text-[#ece3ff]/95">
-                      <span className="font-medium text-[#fff7e8]">{meaning.upright}</span>
-                      {detail && <span className="mt-1.5 block text-[#ece3ff]/85">{detail.uprightDetail}</span>}
+                  <div className={`rounded-[1rem] border p-4 transition ${!card.isReversed ? 'border-accent/40 bg-accent-hi/8' : 'border-line/8 bg-glass/3 opacity-55'}`}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent-hi mb-1.5">정방향</p>
+                    <p className="text-sm leading-6 text-ink/95">
+                      <span className="font-medium text-ink-hi">{meaning.upright}</span>
+                      {detail && <span className="mt-1.5 block text-ink/85">{detail.uprightDetail}</span>}
                     </p>
                   </div>
-                  <div className={`rounded-[1rem] border p-4 transition ${card.isReversed ? 'border-[#d6b36a]/40 bg-[#f0d48a]/8' : 'border-white/8 bg-white/3 opacity-55'}`}>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c9bfe4] mb-1.5">역방향</p>
-                    <p className="text-sm leading-6 text-[#ece3ff]/95">
-                      <span className="font-medium text-[#fff7e8]">{meaning.reversed}</span>
-                      {detail && <span className="mt-1.5 block text-[#ece3ff]/85">{detail.reversedDetail}</span>}
+                  <div className={`rounded-[1rem] border p-4 transition ${card.isReversed ? 'border-accent/40 bg-accent-hi/8' : 'border-line/8 bg-glass/3 opacity-55'}`}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-ink-dim mb-1.5">역방향</p>
+                    <p className="text-sm leading-6 text-ink/95">
+                      <span className="font-medium text-ink-hi">{meaning.reversed}</span>
+                      {detail && <span className="mt-1.5 block text-ink/85">{detail.reversedDetail}</span>}
                     </p>
                   </div>
                 </div>
@@ -171,20 +180,20 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-[1rem] border border-[#f9a8d4]/20 bg-[#f9a8d4]/6 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f9c8dd] mb-1.5">연애 · 관계</p>
-                      <p className="text-[13px] leading-5.5 text-[#ece3ff]/90">{detail.loveNote}</p>
+                      <p className="text-[13px] leading-5.5 text-ink/90">{detail.loveNote}</p>
                     </div>
                     <div className="rounded-[1rem] border border-[#7dd3fc]/20 bg-[#7dd3fc]/6 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a5e3fc] mb-1.5">일 · 재물</p>
-                      <p className="text-[13px] leading-5.5 text-[#ece3ff]/90">{detail.workNote}</p>
+                      <p className="text-[13px] leading-5.5 text-ink/90">{detail.workNote}</p>
                     </div>
                   </div>
                 )}
               </>
             ) : (
-              <p className="mt-5 text-sm text-[#c9bfe4]/80">이 카드의 상세 정보가 준비 중입니다.</p>
+              <p className="mt-5 text-sm text-ink-dim/80">이 카드의 상세 정보가 준비 중입니다.</p>
             )}
 
-            <p className="mt-5 text-[11px] text-[#9f96b8]">
+            <p className="mt-5 text-[11px] text-ink-faint">
               카드 위에서 마우스나 손가락을 움직여 보세요 — 빛이 카드를 따라 흐릅니다.
             </p>
           </div>
