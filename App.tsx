@@ -139,23 +139,29 @@ const PAW_FIELD = Array.from({ length: 14 }).map((_, i) => ({
   emoji: i % 3 === 0 ? '☁️' : '🐾',
 }));
 
-// 복슬복슬한 탕뚱 실루엣 — 긴 털이 눈을 덮고 코와 혀만 보이는 삽살개
-const TangttungDog = () => (
-  <svg width="92" height="66" viewBox="0 0 120 84" fill="none" aria-hidden="true">
-    <circle cx="14" cy="34" r="11" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
-    <circle cx="38" cy="46" r="20" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
-    <circle cx="60" cy="44" r="22" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
-    <circle cx="60" cy="50" r="18" fill="#fdf6ec" />
-    <rect x="34" y="58" width="9" height="18" rx="4.5" fill="#f7ecdc" stroke="#e2c39c" strokeWidth="2" />
-    <rect x="52" y="60" width="9" height="18" rx="4.5" fill="#f7ecdc" stroke="#e2c39c" strokeWidth="2" />
-    <rect x="70" y="58" width="9" height="18" rx="4.5" fill="#f7ecdc" stroke="#e2c39c" strokeWidth="2" />
-    <circle cx="88" cy="34" r="19" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
-    <ellipse cx="76" cy="26" rx="8" ry="11" fill="#e8d3b4" transform="rotate(-20 76 26)" />
-    <path d="M74 28 q6 -8 14 -6 M80 24 q7 -6 14 -3 M88 22 q8 -3 13 2" stroke="#e2c39c" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-    <circle cx="104" cy="36" r="4.6" fill="#3a2b20" />
-    <path d="M99 44 q3 7 8 5 q1 -5 -3 -8 z" fill="#f29bb0" />
-  </svg>
-);
+// 달리는 탕뚱 — public/media/tangttung-runner.png(투명배경 스프라이트)가 있으면
+// 그것을 쓰고, 없으면 사이트의 이모지 모티프(🐾 ☁️)와 같은 언어인 🐩로 폴백.
+// 이모지는 왼쪽을 보므로 진행 방향(→)에 맞춰 좌우 반전한다.
+const TangttungDog = () => {
+  const [spriteOk, setSpriteOk] = useState(true);
+  if (spriteOk) {
+    return (
+      <img
+        src="/media/tangttung-runner.png"
+        alt=""
+        draggable={false}
+        onError={() => setSpriteOk(false)}
+        className="block w-[84px] select-none"
+        style={{ filter: 'drop-shadow(0 6px 10px rgba(90,60,30,0.25))' }}
+      />
+    );
+  }
+  return (
+    <span aria-hidden="true" className="block select-none" style={{ fontSize: 52, transform: 'scaleX(-1)', filter: 'drop-shadow(0 6px 10px rgba(90,60,30,0.25))' }}>
+      🐩
+    </span>
+  );
+};
 
 // 달리는 탕뚱 뒤로 발자국이 순서대로 찍힌다 (26s 주기, CSS와 동기)
 const TRAIL_PAWS = Array.from({ length: 8 }).map((_, i) => {
