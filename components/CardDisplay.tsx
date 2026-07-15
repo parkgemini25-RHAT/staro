@@ -6,11 +6,12 @@ import { getCardImagePath, CARD_BACK_PATH } from '../utils/cardAssets';
 interface CardDisplayProps {
   card: DrawnCard & { deckId?: number };
   delay: number;
+  onSelect?: () => void;
 }
 
 // Interactive holographic card, technique borrowed from simeydotme/pokemon-cards-css:
 // pointer position drives CSS custom properties for 3D tilt, foil shine and glare.
-const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
+const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay, onSelect }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const tiltRef = useRef<HTMLDivElement>(null);
@@ -64,7 +65,9 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
       <motion.div
         layoutId={card.deckId != null ? `card-${card.deckId}` : undefined}
         transition={{ layout: { type: 'spring', stiffness: 170, damping: 22 } }}
-        className="holo-scene relative w-32 h-56 md:w-40 md:h-64 z-40"
+        className={`holo-scene relative w-24 h-40 sm:w-32 sm:h-56 md:w-40 md:h-64 z-40 ${onSelect ? 'cursor-pointer' : ''}`}
+        onClick={onSelect}
+        title={onSelect ? '카드 상세 보기' : undefined}
       >
         <div className="holo-flip w-full h-full" style={{ animationDelay: `${delay}ms` }}>
 

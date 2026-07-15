@@ -6,6 +6,7 @@ import { getTarotReading } from './services/readingService';
 import { getCardImagePath, CARD_BACK_PATH } from './utils/cardAssets';
 import { playStartChime, playCardFlick, playShuffleRiffle, setSfxMuted } from './utils/soundFx';
 import CardDisplay from './components/CardDisplay';
+import CardDetailModal from './components/CardDetailModal';
 import LandingScreen from './components/LandingScreen';
 
 // Example questions to rotate
@@ -129,8 +130,16 @@ const AtelierBackground = () => (
 
 const STORAGE_KEY = 'starot-reading-history';
 const MAX_SAVED_READINGS = 12;
-const FAN_SPREAD_DEG = 90; // total arc angle of the deck fan
+const FAN_SPREAD_DEG = 110; // total arc angle of the deck fan (wide hand-fan)
 const CARD_FLIGHT_MS = 450; // deck → slot layout morph duration (flip starts after this)
+const MAIN_PHASE_COUNT = 3; // 통배열: 과거·현재·미래 3장 먼저, 조언 1장은 결과 후 추가로
+
+// 뽑는 순간에 집중시키는 페이즈별 카피 (기본 흐름 리딩)
+const FLOW_PICK_COPY = [
+  { title: '카드를 뽑아, 과거를 바라보세요', sub: '이 고민이 시작된 자리를 비추는 첫 번째 장입니다' },
+  { title: '카드를 뽑아, 지금의 흐름을 느껴보세요', sub: '당신이 서 있는 현재를 비추는 두 번째 장입니다' },
+  { title: '카드를 뽑아, 다가올 미래를 열어보세요', sub: '흐름이 향하는 곳을 비추는 세 번째 장입니다' },
+];
 
 // A revealed card remembers which deck card it came from so Motion's layoutId
 // can morph the fan card into the slot (FLIP / shared layout technique).
@@ -325,9 +334,10 @@ const App: React.FC = () => {
     };
 
     if (isFirstPick) {
+      // Visible shuffle: the fan gathers into a stack, shakes, then respreads (900ms)
       setIsShuffling(true);
       playSfx('shuffle');
-      setTimeout(() => { setIsShuffling(false); commitPick(); }, 600);
+      setTimeout(() => { setIsShuffling(false); commitPick(); }, 900);
     } else {
       commitPick();
     }
@@ -359,15 +369,20 @@ const App: React.FC = () => {
   }, [state]);
 
   const targetCardCount = secretCards.length || READING_TYPES[selectedReadingType].positions.length;
-  const showResults = revealedCards.length === targetCardCount && reading !== null;
-  const isSelectingPhase = state === ReadingState.DRAWING && !showResults;
+  // 통배열 3장이 공개되고 리딩이 도착하면 결과 표시; 조언 카드는 결과 하단에서 추가로 뽑음
+  const showResults = revealedCards.length >= MAIN_PHASE_COUNT && reading !== null;
+  const adviceCard = revealedCards[MAIN_PHASE_COUNT];
+  const adviceDrawn = revealedCards.length > MAIN_PHASE_COUNT;
+  const isSelectingPhase = state === ReadingState.DRAWING && revealedCards.length < MAIN_PHASE_COUNT;
   const currentReadingConfig = READING_TYPES[selectedReadingType];
   const isIdle = state === ReadingState.IDLE;
 
+  const [detailCard, setDetailCard] = useState<{ card: PickedCard; label: string } | null>(null);
+
   // Deck fan arc geometry, sized to the measured container width
   // chord = 2r·sin(spread/2) must fit the container; height covers the edge drop
-  const fanRadius = Math.max(220, Math.min((fanWidth - 90) / 1.41, 460));
-  const fanHeight = Math.round(fanRadius * 0.3 + 200);
+  const fanRadius = Math.max(220, Math.min((fanWidth - 80) / 1.64, 520));
+  const fanHeight = Math.round(fanRadius * 0.43 + 190);
 
   const [isExportingShareCard, setIsExportingShareCard] = useState(false);
 
@@ -375,13 +390,17 @@ const App: React.FC = () => {
     const count = revealedCards.length;
     const stepLabels = READING_TYPES[selectedReadingType].stepLabels;
     const keyword = stepLabels[count];
-    if (!keyword) return null;
+    if (!keyword || count >= MAIN_PHASE_COUNT) return null;
+    const copy = selectedReadingType === 'flow' ? FLOW_PICK_COPY[count] : null;
     return (
       <span className="flex flex-col items-center gap-3">
         <span className="inline-flex items-center gap-2 rounded-full border border-[#d6b36a]/35 bg-white/5 px-4 py-1.5 text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase text-[#f3d98b] backdrop-blur-md">
-          {count + 1} / {stepLabels.length} · {keyword}
+          {count + 1} / {MAIN_PHASE_COUNT} · {keyword}
         </span>
-        <span className="text-[#fff7e8] font-display text-xl md:text-2xl">흐름을 짚어볼 카드를 선택하세요</span>
+        <span key={count} className="text-[#fff7e8] font-display text-2xl md:text-3xl animate-fade-in-up">
+          {copy ? copy.title : `카드를 뽑아 ${keyword}의 흐름을 바라보세요`}
+        </span>
+        {copy && <span className="text-[#cdb682]/85 text-xs md:text-sm tracking-wide">{copy.sub}</span>}
       </span>
     );
   };
@@ -555,10 +574,9 @@ const App: React.FC = () => {
             </header>
           </>
         )}
-        {isSelectingPhase && revealedCards.length < targetCardCount && (
+        {isSelectingPhase && (
           <div className="flex flex-col items-center animate-fade-in-up w-full flex-1 justify-center z-20 relative">
-            {isShuffling && <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"><div className="border border-[#d6b36a]/35 bg-[#0b0616]/85 backdrop-blur-md px-8 py-4 rounded-full shadow-[0_0_40px_rgba(214,179,106,0.25)] animate-pulse"><span className="text-[#f6e8bf] font-display tracking-[0.35em] text-lg md:text-xl">셔플 중 ···</span></div></div>}
-            <h2 className="mb-10 text-center min-h-[3rem] flex items-center justify-center">
+            <h2 className="mb-8 text-center min-h-[3rem] flex items-center justify-center">
               {renderInstructionText()}
             </h2>
             <div ref={fanRef} className="w-full relative" style={{ height: fanHeight }}>
@@ -569,59 +587,108 @@ const App: React.FC = () => {
                   <div
                     key={id}
                     onClick={() => handleCardPick(id)}
-                    className={`absolute left-1/2 top-0 w-16 h-28 md:w-24 md:h-40 group ${isShuffling ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                    className={`fan-card absolute left-1/2 top-0 w-16 h-28 md:w-24 md:h-40 group ${isShuffling ? 'cursor-wait' : 'cursor-pointer'}`}
                     style={{
                       zIndex: index,
-                      transform: `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
+                      // Shuffle: gather every card into a centered stack, then respread in a wave
+                      transform: isShuffling
+                        ? `translateX(-50%) translateY(${fanHeight * 0.22}px) rotate(${(index % 5 - 2) * 1.6}deg)`
+                        : `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
                       transformOrigin: `50% ${fanRadius}px`,
-                      transition: 'transform 0.45s cubic-bezier(0.25, 0.8, 0.3, 1)',
+                      transition: 'transform 0.4s cubic-bezier(0.3, 0.8, 0.3, 1)',
+                      transitionDelay: `${(isShuffling ? index : n - index) * 2.5}ms`,
                     }}
                   >
                     <motion.div layoutId={`card-${id}`} className="w-full h-full">
-                      <div className={`w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-300 group-hover:-translate-y-3 group-hover:border-[#d6b36a]/70 group-hover:shadow-[0_12px_32px_rgba(214,179,106,0.28)] ${isShuffling ? 'animate-shuffle-shake opacity-60 blur-[2px] brightness-75' : ''}`}>
-                        <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover transition-[filter] duration-300 group-hover:brightness-125" draggable={false} />
+                      <div className={`w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-100 group-hover:-translate-y-5 group-hover:scale-[1.05] group-hover:border-[#d6b36a]/80 group-hover:shadow-[0_16px_40px_rgba(214,179,106,0.35)] ${isShuffling ? 'animate-shuffle-shake brightness-90' : ''}`}>
+                        <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover transition-[filter] duration-100 group-hover:brightness-130" draggable={false} />
                       </div>
                     </motion.div>
                   </div>
                 );
               })}
             </div>
-            <p className="text-[#cdb682]/70 text-sm mt-8 tracking-wide animate-pulse">카드를 클릭하여 운명을 확인하세요</p>
+            <p className="text-[#cdb682]/70 text-sm mt-8 tracking-wide animate-pulse">
+              {isShuffling ? '별의 순서를 다시 섞는 중 ···' : '마음이 이끄는 카드 한 장을 클릭하세요'}
+            </p>
           </div>
         )}
         {(state === ReadingState.DRAWING || showResults) && (
           <div className="w-full flex-1 flex flex-col items-center z-20">
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mt-4 mb-12 w-full max-w-5xl">
-               {[0, 1, 2, 3].map((index) => {
+             <div className="grid grid-cols-3 gap-3 md:gap-8 mt-4 mb-12 w-full max-w-4xl">
+               {Array.from({ length: MAIN_PHASE_COUNT }, (_, index) => {
                   const card = revealedCards[index];
                   return (
                     <div key={index} className="flex flex-col items-center">
-                       {!card ? <div className={`w-32 h-56 md:w-40 md:h-64 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'border-[#d6b36a]/50 shadow-[0_0_24px_rgba(214,179,106,0.14)] animate-pulse' : ''}`}><span className="text-[#cdb682]/60 text-xs font-semibold tracking-[0.25em] uppercase">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={CARD_FLIGHT_MS} />}
+                       {!card ? <div className={`w-24 h-40 sm:w-32 sm:h-56 md:w-40 md:h-64 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'border-[#d6b36a]/50 shadow-[0_0_24px_rgba(214,179,106,0.14)] animate-pulse' : ''}`}><span className="text-[#cdb682]/60 text-xs font-semibold tracking-[0.25em] uppercase">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={CARD_FLIGHT_MS} onSelect={() => setDetailCard({ card, label: currentReadingConfig.stepLabels[index] })} />}
                     </div>
                   );
                })}
              </div>
-             {revealedCards.length === targetCardCount && !showResults && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-10 h-10 border-2 border-[#d6b36a] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-[#e7def8]/85 font-display text-lg tracking-wide">별들이 당신의 운명을 속삭이고 있습니다 ···</p></div>}
+             {revealedCards.length >= MAIN_PHASE_COUNT && !reading && state !== ReadingState.ERROR && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-10 h-10 border-2 border-[#d6b36a] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-[#e7def8]/85 font-display text-lg tracking-wide">별들이 당신의 운명을 속삭이고 있습니다 ···</p></div>}
              {showResults && reading && (
                 <div className="w-full max-w-4xl bg-[linear-gradient(180deg,rgba(16,10,29,0.88),rgba(10,6,18,0.92))] backdrop-blur-xl rounded-[2rem] p-6 md:p-10 border border-white/12 shadow-[0_30px_90px_rgba(0,0,0,0.45)] animate-fade-in-up mb-20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#d6b36a]/70 to-transparent"></div>
                   <div className="text-center mb-10"><span className="text-[#cdb682] text-[10px] md:text-xs font-semibold tracking-[0.3em] uppercase mb-3 block">Your Question</span><h2 className="text-2xl md:text-3xl text-[#fff7e8] font-display leading-tight">"{question}"</h2></div>
-                  <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 mb-12">
+                  <div className="grid md:grid-cols-3 gap-x-10 gap-y-8 mb-12">
                     <Section title={currentReadingConfig.sectionTitles[0]} readingContent={reading.pastReading} cardMeaning={reading.pastCardMeaning} />
                     <Section title={currentReadingConfig.sectionTitles[1]} readingContent={reading.presentReading} cardMeaning={reading.presentCardMeaning} />
                     <Section title={currentReadingConfig.sectionTitles[2]} readingContent={reading.futureReading} cardMeaning={reading.futureCardMeaning} />
-                    <Section title={currentReadingConfig.sectionTitles[3]} readingContent={reading.adviceReading} cardMeaning={reading.adviceCardMeaning} />
                   </div>
-                  <div className="rounded-[1.4rem] p-6 md:p-8 border border-[#d6b36a]/20 bg-[radial-gradient(circle_at_top,rgba(214,179,106,0.12),transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] relative">
-                    <h3 className="text-lg md:text-xl mb-4 flex items-center gap-2 font-display text-[#f0dca4] tracking-wide"><span className="text-[#f0d48a]">✦</span> 종합 해석</h3>
-                    <p className="text-[#ece3ff]/95 leading-relaxed mb-6 whitespace-pre-line text-base md:text-lg font-light">{reading.summary}</p>
-                    <div className="bg-[#090512]/60 rounded-xl p-4 border-l-2 border-[#d6b36a]"><p className="text-lg font-medium text-[#fff7e8] italic">"{reading.oneLineAdvice}"</p></div>
-                    <div className="mt-8 flex justify-end items-center gap-4 flex-wrap border-t border-white/10 pt-4">
-                      <button onClick={downloadShareCard} disabled={isExportingShareCard} className="inline-flex items-center gap-2 rounded-full border border-[#f0d48a]/40 bg-[#f1d18a] px-6 py-3 text-sm md:text-base font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)] disabled:opacity-60 disabled:cursor-wait">
-                        {isExportingShareCard ? '공유 카드 생성 중 ···' : '공유 카드 저장'}
-                      </button>
+
+                  {/* 조언 카드 분기: 통배열 3장의 흐름을 읽은 뒤, 마지막 한 장을 추가로 뽑는다 */}
+                  {!adviceDrawn ? (
+                    <div className="rounded-[1.4rem] border border-[#d6b36a]/25 bg-[radial-gradient(circle_at_top,rgba(214,179,106,0.1),transparent_50%)] p-6 md:p-8 text-center relative overflow-visible">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-[#d6b36a]/35 bg-white/5 px-4 py-1.5 text-[10px] md:text-xs font-semibold tracking-[0.3em] uppercase text-[#f3d98b]">
+                        마지막 한 장 · 조언
+                      </span>
+                      <h3 className="mt-4 font-display text-xl md:text-2xl text-[#fff7e8]">카드를 뽑아, 지금 필요한 조언을 청해보세요</h3>
+                      <p className="mt-2 text-xs md:text-sm text-[#cdb682]/85">세 장의 흐름을 읽었습니다. 별이 건네는 조언 한 장이 남아 있어요.</p>
+                      <div className="relative mx-auto mt-6 w-full max-w-md" style={{ height: 175 }}>
+                        {deckCards.slice(0, 22).map((id, index, arr) => {
+                          const angle = arr.length > 1 ? (index / (arr.length - 1) - 0.5) * 60 : 0;
+                          return (
+                            <div
+                              key={id}
+                              onClick={() => handleCardPick(id)}
+                              className="fan-card absolute left-1/2 top-0 w-14 h-24 md:w-16 md:h-28 group cursor-pointer"
+                              style={{
+                                zIndex: index,
+                                transform: `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
+                                transformOrigin: '50% 240px',
+                                transition: 'transform 0.4s cubic-bezier(0.3, 0.8, 0.3, 1)',
+                              }}
+                            >
+                              <motion.div layoutId={`card-${id}`} className="w-full h-full">
+                                <div className="w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-100 group-hover:-translate-y-4 group-hover:scale-[1.05] group-hover:border-[#d6b36a]/80 group-hover:shadow-[0_16px_40px_rgba(214,179,106,0.35)]">
+                                  <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover transition-[filter] duration-100 group-hover:brightness-130" draggable={false} />
+                                </div>
+                              </motion.div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col items-center mb-10">
+                        {adviceCard && <CardDisplay card={adviceCard} delay={CARD_FLIGHT_MS} onSelect={() => setDetailCard({ card: adviceCard, label: currentReadingConfig.stepLabels[3] })} />}
+                      </div>
+                      <div className="mb-12">
+                        <Section title={currentReadingConfig.sectionTitles[3]} readingContent={reading.adviceReading} cardMeaning={reading.adviceCardMeaning} />
+                      </div>
+                      <div className="rounded-[1.4rem] p-6 md:p-8 border border-[#d6b36a]/20 bg-[radial-gradient(circle_at_top,rgba(214,179,106,0.12),transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] relative animate-fade-in-up">
+                        <h3 className="text-lg md:text-xl mb-4 flex items-center gap-2 font-display text-[#f0dca4] tracking-wide"><span className="text-[#f0d48a]">✦</span> 종합 해석</h3>
+                        <p className="text-[#ece3ff]/95 leading-relaxed mb-6 whitespace-pre-line text-base md:text-lg font-light">{reading.summary}</p>
+                        <div className="bg-[#090512]/60 rounded-xl p-4 border-l-2 border-[#d6b36a]"><p className="text-lg font-medium text-[#fff7e8] italic">"{reading.oneLineAdvice}"</p></div>
+                        <div className="mt-8 flex justify-end items-center gap-4 flex-wrap border-t border-white/10 pt-4">
+                          <button onClick={downloadShareCard} disabled={isExportingShareCard} className="inline-flex items-center gap-2 rounded-full border border-[#f0d48a]/40 bg-[#f1d18a] px-6 py-3 text-sm md:text-base font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)] disabled:opacity-60 disabled:cursor-wait">
+                            {isExportingShareCard ? '공유 카드 생성 중 ···' : '공유 카드 저장'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); pickLockRef.current = false; pendingPickRef.current = null; setState(ReadingState.IDLE); }} className="text-[#cdb682] hover:text-[#fff7e8] transition-colors border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 text-xs md:text-sm uppercase tracking-[0.25em]">다른 질문 하기</button></div>
                 </div>
              )}
@@ -629,6 +696,13 @@ const App: React.FC = () => {
         )}
         {state === ReadingState.ERROR && <div className="text-center p-8 rounded-[1.4rem] mt-12 border border-white/12 bg-white/5 backdrop-blur-md max-w-md"><p className="text-[#f3c8c8]">별들의 신호를 수신하는데 실패했습니다.</p><button onClick={() => setState(ReadingState.IDLE)} className="mt-4 text-xs uppercase tracking-[0.25em] text-[#cdb682] hover:text-[#fff7e8] border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 transition-colors">다시 시도하기</button></div>}
       </div>
+      {detailCard && (
+        <CardDetailModal
+          card={detailCard.card}
+          positionLabel={detailCard.label}
+          onClose={() => setDetailCard(null)}
+        />
+      )}
     </div>
     </MotionConfig>
   );

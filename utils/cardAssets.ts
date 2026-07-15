@@ -13,3 +13,19 @@ export const getCardImagePath = (card: TarotCard): string => {
 };
 
 export const CARD_BACK_PATH = '/cards/back.png';
+
+// Holo rarity tiers (pokemon-cards-css style), mapped to tarot hierarchy:
+// Major Arcana → galaxy (rainbow secret), Court/Ace → foil (regular holo), pips → glossy
+export type CardRarity = 'galaxy' | 'foil' | 'glossy';
+
+export const getCardRarity = (card: TarotCard): CardRarity => {
+  if (card.arcana === 'Major') return 'galaxy';
+  if (typeof card.number === 'string' || card.number === 1) return 'foil';
+  return 'glossy';
+};
+
+export const RARITY_LABELS: Record<CardRarity, string> = {
+  galaxy: '메이저 아르카나 · 갤럭시 홀로',
+  foil: '코트 · 에이스 · 홀로포일',
+  glossy: '핍 카드 · 글로시',
+};

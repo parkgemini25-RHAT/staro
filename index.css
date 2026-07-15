@@ -92,6 +92,11 @@ body {
   animation: shuffle-shake 0.1s linear infinite;
 }
 
+/* Deck fan: hovered card rises above its neighbours instantly */
+.fan-card:hover {
+  z-index: 300 !important;
+}
+
 /* Hide scrollbar for deck spread */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -187,5 +192,201 @@ body {
   }
   .holo-tilt {
     transform: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Card detail view — full pokemon-cards-css treatment
+   (3d transforms + filters + blend modes + css gradients, per poke-holo.simey.me)
+   Vars driven by pointer: --px --py (pointer %), --rx --ry (tilt deg),
+   --pfc (pointer-from-center 0..1), --bgx --bgy (background shift %)
+--------------------------------------------------------------------------- */
+:root {
+  --sunpillar-1: hsl(2, 100%, 73%);
+  --sunpillar-2: hsl(53, 100%, 69%);
+  --sunpillar-3: hsl(93, 100%, 69%);
+  --sunpillar-4: hsl(176, 100%, 76%);
+  --sunpillar-5: hsl(228, 100%, 74%);
+  --sunpillar-6: hsl(283, 100%, 73%);
+}
+
+.pkc {
+  perspective: 700px;
+  transform: translate3d(0, 0, 0.01px);
+}
+
+.pkc__rotator {
+  display: grid;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.55s ease-out;
+  will-change: transform;
+  border-radius: 4.75% / 3.5%;
+  box-shadow:
+    0 0 3px -1px white,
+    0 0 3px 1px rgba(214, 179, 106, 0.6),
+    0 0 16px 2px rgba(214, 179, 106, 0.28),
+    0px 12px 26px -8px black,
+    0 0 55px -22px rgba(214, 179, 106, 0.5);
+  touch-action: none;
+}
+
+.pkc.interacting .pkc__rotator {
+  transition: transform 0.05s linear;
+}
+
+.pkc__rotator > * {
+  grid-area: 1/1;
+  border-radius: 4.75% / 3.5%;
+  overflow: hidden;
+  transform: translate3d(0, 0, 0.01px);
+}
+
+.pkc__shine,
+.pkc__glare {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+}
+
+.pkc.interacting .pkc__shine,
+.pkc.interacting .pkc__glare {
+  opacity: 1;
+  transition: opacity 0.2s ease-out;
+}
+
+/* Glare: bright radial spot following the pointer (all rarities) */
+.pkc__glare {
+  transform: translateZ(1.4px);
+  background-image: radial-gradient(
+    farthest-corner circle at var(--px, 50%) var(--py, 50%),
+    hsla(44, 70%, 92%, 0.7) 10%,
+    hsla(44, 60%, 85%, 0.4) 24%,
+    hsla(0, 0%, 0%, 0.55) 82%
+  );
+  mix-blend-mode: overlay;
+}
+
+/* ── glossy (pip cards): soft diagonal sheen ─────────────────────────── */
+.pkc[data-rarity='glossy'] .pkc__shine {
+  transform: translateZ(1px);
+  background-image: linear-gradient(
+    115deg,
+    transparent 22%,
+    rgba(240, 212, 138, 0.45) calc(38% + (var(--px, 50%) - 50%) * 0.3),
+    rgba(255, 255, 255, 0.35) calc(50% + (var(--px, 50%) - 50%) * 0.3),
+    rgba(137, 205, 255, 0.3) calc(62% + (var(--px, 50%) - 50%) * 0.3),
+    transparent 80%
+  );
+  filter: brightness(0.9) contrast(1.6) saturate(0.9);
+  mix-blend-mode: color-dodge;
+}
+
+/* ── foil (court + ace): vertical sunpillar bands, regular-holo style ── */
+.pkc[data-rarity='foil'] .pkc__shine {
+  transform: translateZ(1px);
+  --space: 7.5%;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      var(--sunpillar-1) calc(var(--space) * 1),
+      var(--sunpillar-2) calc(var(--space) * 2),
+      var(--sunpillar-3) calc(var(--space) * 3),
+      var(--sunpillar-4) calc(var(--space) * 4),
+      var(--sunpillar-5) calc(var(--space) * 5),
+      var(--sunpillar-6) calc(var(--space) * 6),
+      var(--sunpillar-1) calc(var(--space) * 7)
+    ),
+    radial-gradient(
+      farthest-corner circle at var(--px, 50%) var(--py, 50%),
+      hsla(0, 0%, 100%, 0.35) 5%,
+      hsla(0, 0%, 65%, 0.2) 35%,
+      hsl(0, 0%, 8%) 125%
+    );
+  background-position: center, center;
+  background-size: 400% 100%, cover;
+  background-position-x: calc(50% + (var(--px, 50%) - 50%) * -1.6), center;
+  background-blend-mode: soft-light;
+  filter: brightness(calc(0.62 + var(--pfc, 0) * 0.4)) contrast(2.2) saturate(0.9);
+  mix-blend-mode: color-dodge;
+}
+
+/* ── galaxy (Major Arcana): rainbow secret + glitter, layered blends ── */
+.pkc[data-rarity='galaxy'] .pkc__shine {
+  transform: translateZ(1px);
+  background-image:
+    /* glitter field: two offset dot grids */
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9) 0.4px, transparent 1.1px),
+    radial-gradient(circle at 20% 70%, rgba(255, 255, 255, 0.7) 0.35px, transparent 1px),
+    linear-gradient(
+      -30deg,
+      hsl(0, 57%, 40%), hsl(40, 53%, 42%), hsl(90, 60%, 38%), hsl(180, 60%, 38%),
+      hsl(210, 57%, 42%), hsl(280, 55%, 34%),
+      hsl(0, 57%, 40%), hsl(40, 53%, 42%), hsl(90, 60%, 38%), hsl(180, 60%, 38%),
+      hsl(210, 57%, 42%), hsl(280, 55%, 34%), hsl(0, 57%, 40%)
+    );
+  background-size: 5px 5px, 7px 7px, 400% 400%;
+  background-position:
+    calc(var(--px, 50%) * 0.4) calc(var(--py, 50%) * 0.4),
+    calc(var(--px, 50%) * -0.3) calc(var(--py, 50%) * -0.3),
+    calc(25% + var(--px, 50%) / 2) calc(25% + var(--py, 50%) / 2);
+  background-blend-mode: screen, screen, luminosity;
+  filter: brightness(calc(0.55 + var(--pfc, 0) * 0.35)) contrast(2.3) saturate(0.85);
+  mix-blend-mode: color-dodge;
+}
+
+.pkc[data-rarity='galaxy'] .pkc__glare {
+  background-image: radial-gradient(
+    farthest-corner circle at var(--px, 50%) var(--py, 50%),
+    hsl(0, 0%, 85%) 0%,
+    hsla(187, 12%, 85%, 0.3) 30%,
+    hsl(197, 8%, 22%) 120%
+  );
+  filter: brightness(0.95) contrast(1.7);
+  mix-blend-mode: hard-light;
+}
+
+/* ── idle showcase motion (before the user touches the card) ─────────── */
+@keyframes pkc-idle-tilt {
+  0%, 100% { transform: rotateX(0deg) rotateY(-6deg); }
+  25% { transform: rotateX(5deg) rotateY(5deg); }
+  50% { transform: rotateX(-2deg) rotateY(8deg); }
+  75% { transform: rotateX(-5deg) rotateY(-4deg); }
+}
+
+@keyframes pkc-idle-sheen {
+  0%, 100% { background-position: 130% 20%; opacity: 0.55; }
+  50% { background-position: -30% 80%; opacity: 0.85; }
+}
+
+.pkc.idle .pkc__rotator {
+  animation: pkc-idle-tilt 9s ease-in-out infinite;
+}
+
+.pkc__idle-sheen {
+  pointer-events: none;
+  transform: translateZ(1.2px);
+  background-image: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(240, 212, 138, 0.5) 44%,
+    rgba(255, 255, 255, 0.42) 50%,
+    rgba(160, 210, 255, 0.4) 56%,
+    transparent 70%
+  );
+  background-size: 250% 250%;
+  mix-blend-mode: color-dodge;
+  filter: brightness(0.9) contrast(1.5);
+  opacity: 0;
+}
+
+.pkc.idle .pkc__idle-sheen {
+  animation: pkc-idle-sheen 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pkc.idle .pkc__rotator,
+  .pkc.idle .pkc__idle-sheen {
+    animation: none;
   }
 }
