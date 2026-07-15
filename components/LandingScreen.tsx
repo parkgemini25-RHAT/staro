@@ -97,8 +97,9 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                   <button
                     key={cat.label}
                     onClick={() => {
+                      // 칩마다 정해진 질문을 항상 채운다 (재클릭 = 해당 카테고리 질문으로 교체)
                       onSelectCategory?.(cat.label);
-                      if (!question.trim()) onQuestionChange(cat.question);
+                      onQuestionChange(cat.question);
                     }}
                     className={`rounded-full border px-3 py-1.5 text-[11px] transition sm:text-xs ${selectedCategory === cat.label ? 'border-accent-hi/60 bg-accent-hi/15 text-accent-soft' : 'border-line/12 bg-glass/5 text-ink hover:border-accent/40 hover:text-accent-soft'}`}
                   >
