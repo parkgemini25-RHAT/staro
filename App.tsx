@@ -139,29 +139,9 @@ const PAW_FIELD = Array.from({ length: 14 }).map((_, i) => ({
   emoji: i % 3 === 0 ? '☁️' : '🐾',
 }));
 
-// 달리는 탕뚱 — public/media/tangttung-runner.png(투명배경 스프라이트)가 있으면
-// 그것을 쓰고, 없으면 사이트의 이모지 모티프(🐾 ☁️)와 같은 언어인 🐩로 폴백.
-// 이모지는 왼쪽을 보므로 진행 방향(→)에 맞춰 좌우 반전한다.
-const TangttungDog = () => {
-  const [spriteOk, setSpriteOk] = useState(true);
-  if (spriteOk) {
-    return (
-      <img
-        src="/media/tangttung-runner.png"
-        alt=""
-        draggable={false}
-        onError={() => setSpriteOk(false)}
-        className="block w-[84px] select-none"
-        style={{ filter: 'drop-shadow(0 6px 10px rgba(90,60,30,0.25))' }}
-      />
-    );
-  }
-  return (
-    <span aria-hidden="true" className="block select-none" style={{ fontSize: 52, transform: 'scaleX(-1)', filter: 'drop-shadow(0 6px 10px rgba(90,60,30,0.25))' }}>
-      🐩
-    </span>
-  );
-};
+// 달리는 탕뚱 스프라이트 경로 — 이미지 파이프라인이 이 파일을 생성하면 러너가 켜진다.
+// 대체 이모지는 쓰지 않는다: 진짜 탕뚱이 준비되기 전에는 러너 자체를 렌더하지 않는다.
+const TANGTTUNG_RUNNER_SPRITE = '/media/tangttung-runner.png';
 
 // 달리는 탕뚱 뒤로 발자국이 순서대로 찍힌다 (26s 주기, CSS와 동기)
 const TRAIL_PAWS = Array.from({ length: 8 }).map((_, i) => {
@@ -193,24 +173,43 @@ const TangttungBackground = () => (
 
 // 시그니처: 주기적으로 화면을 가로질러 달리는 탕뚱 + 발자국 트레일.
 // 콘텐츠 위(z-40)를 달리되 모달·컨트롤 아래에 머문다.
-const TangttungRunner = () => (
-  <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
-    <div className="tang-runner">
-      <div className="tang-runner__dog">
-        <TangttungDog />
+// 스프라이트 파일이 실제로 존재할 때만 레이어 전체를 렌더한다.
+const TangttungRunner = () => {
+  const [spriteReady, setSpriteReady] = useState(false);
+
+  useEffect(() => {
+    const probe = new Image();
+    probe.onload = () => setSpriteReady(true);
+    probe.src = TANGTTUNG_RUNNER_SPRITE;
+  }, []);
+
+  if (!spriteReady) return null;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+      <div className="tang-runner">
+        <div className="tang-runner__dog">
+          <img
+            src={TANGTTUNG_RUNNER_SPRITE}
+            alt=""
+            draggable={false}
+            className="block w-[84px] select-none"
+            style={{ filter: 'drop-shadow(0 6px 10px rgba(90,60,30,0.25))' }}
+          />
+        </div>
       </div>
+      {TRAIL_PAWS.map((paw, i) => (
+        <span
+          key={i}
+          className="paw-trail"
+          style={{ left: paw.left, fontSize: 15, animationDelay: paw.delay, ['--paw-rot' as string]: paw.rot } as React.CSSProperties}
+        >
+          🐾
+        </span>
+      ))}
     </div>
-    {TRAIL_PAWS.map((paw, i) => (
-      <span
-        key={i}
-        className="paw-trail"
-        style={{ left: paw.left, fontSize: 15, animationDelay: paw.delay, ['--paw-rot' as string]: paw.rot } as React.CSSProperties}
-      >
-        🐾
-      </span>
-    ))}
-  </div>
-);
+  );
+};
 
 const STORAGE_KEY = 'starot-reading-history';
 const MAX_SAVED_READINGS = 12;
