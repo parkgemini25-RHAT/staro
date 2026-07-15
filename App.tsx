@@ -201,6 +201,8 @@ const App: React.FC = () => {
   const [state, setState] = useState<ReadingState>(ReadingState.IDLE);
   const [deckCards, setDeckCards] = useState<number[]>([]);
   const [shufflePhase, setShufflePhase] = useState<ShufflePhase>(null);
+  const [liftingCardId, setLiftingCardId] = useState<number | null>(null);
+  const [questionCategory, setQuestionCategory] = useState<string | null>(null);
   const isShuffling = shufflePhase !== null;
   const [fanWidth, setFanWidth] = useState(0);
 
@@ -327,6 +329,7 @@ const App: React.FC = () => {
     pickLockRef.current = false;
     pendingPickRef.current = null;
     setShufflePhase(null);
+    setLiftingCardId(null);
     setState(ReadingState.DRAWING);
     setDeckCards(Array.from({ length: 78 }, (_, i) => i));
     generateReadingBackground(question, finalCards);
@@ -334,7 +337,9 @@ const App: React.FC = () => {
 
   const generateReadingBackground = async (q: string, cards: DrawnCard[]) => {
     try {
-      const result = await getTarotReading(q, cards, currentReadingConfig.label);
+      // 선택된 카테고리를 해석 컨텍스트로 전달 (예: "기본 흐름 · 연애 · 관계")
+      const label = questionCategory ? `${currentReadingConfig.label} · ${questionCategory}` : currentReadingConfig.label;
+      const result = await getTarotReading(q, cards, label);
       setReading(result);
       saveCurrentReading(q, selectedReadingType, cards, result);
     } catch (error) {
@@ -349,10 +354,10 @@ const App: React.FC = () => {
     if (state !== ReadingState.DRAWING || revealedCards.length >= targetCardCount) return;
     if (!deckCards.includes(deckIndex)) return;
     pickLockRef.current = true;
-    const isFirstPick = revealedCards.length === 0;
+    const isMainPhase = revealedCards.length < MAIN_PHASE_COUNT;
 
     const commitPick = () => {
-      playSfx('pick');
+      setLiftingCardId(null);
       setDeckCards(prev => prev.filter(id => id !== deckIndex));
       setRevealedCards(prev =>
         prev.length < secretCards.length
@@ -368,16 +373,24 @@ const App: React.FC = () => {
       }, CARD_FLIGHT_MS + 250);
     };
 
-    if (isFirstPick) {
-      // Riffle shuffle: split → merge (reorder) → split → merge → respread
+    // The chosen card first slides OUT of the fan, then flies to its slot
+    const liftThenCommit = () => {
+      setLiftingCardId(deckIndex);
+      playSfx('pick');
+      setTimeout(commitPick, 230);
+    };
+
+    if (isMainPhase) {
+      // Every main-phase pick starts with the riffle: split → merge → split → merge
       playSfx('shuffle');
       setShufflePhase('split1');
       setTimeout(() => setShufflePhase('merge1'), 240);
       setTimeout(() => { setShufflePhase('split2'); playSfx('shuffle'); }, 500);
       setTimeout(() => setShufflePhase('merge2'), 740);
-      setTimeout(() => { setShufflePhase(null); commitPick(); }, 1020);
+      setTimeout(() => { setShufflePhase(null); liftThenCommit(); }, 1020);
     } else {
-      commitPick();
+      // Advice pick from the mini fan: quick lift, no full shuffle
+      liftThenCommit();
     }
   };
 
@@ -597,7 +610,9 @@ const App: React.FC = () => {
             exampleQuestion={EXAMPLE_QUESTIONS[placeholderIndex]}
             errorMessage={questionError}
             savedReadings={savedReadings}
+            selectedCategory={questionCategory}
             onQuestionChange={(value) => { setQuestion(value); if (questionError) setQuestionError(null); }}
+            onSelectCategory={setQuestionCategory}
             onStart={handleStart}
             onFillExample={fillQuestionExample}
             onLoadReading={loadSavedReading}
@@ -633,7 +648,12 @@ const App: React.FC = () => {
                 let innerRotate = '0deg';
                 let zIndex = index;
                 let delayMs = (n - index) * 2;
-                if (shufflePhase) {
+                if (id === liftingCardId) {
+                  // Drawn card slides out of the fan along its own axis before the flight
+                  transform = `translateX(-50%) rotate(${angle.toFixed(2)}deg) translateY(-72px) scale(1.08)`;
+                  zIndex = 500;
+                  delayMs = 0;
+                } else if (shufflePhase) {
                   const round = shufflePhase === 'split1' || shufflePhase === 'merge1' ? 1 : 2;
                   const dir = srand(id, round) > 0.5 ? 1 : -1;
                   if (shufflePhase.startsWith('split')) {
@@ -659,7 +679,9 @@ const App: React.FC = () => {
                       zIndex,
                       transform,
                       transformOrigin: `50% ${fanRadius}px`,
-                      transition: `transform ${shufflePhase ? '0.22s' : '0.4s'} cubic-bezier(0.3, 0.7, 0.4, 1)`,
+                      transitionProperty: 'transform',
+                      transitionDuration: id === liftingCardId ? '0.2s' : shufflePhase ? '0.22s' : '0.4s',
+                      transitionTimingFunction: 'cubic-bezier(0.3, 0.7, 0.4, 1)',
                       transitionDelay: `${delayMs.toFixed(0)}ms`,
                     }}
                   >
@@ -722,10 +744,12 @@ const App: React.FC = () => {
                               onClick={() => handleCardPick(id)}
                               className="fan-card absolute left-1/2 top-0 w-14 h-24 md:w-16 md:h-28 group cursor-pointer"
                               style={{
-                                zIndex: index,
-                                transform: `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
+                                zIndex: id === liftingCardId ? 500 : index,
+                                transform: id === liftingCardId
+                                  ? `translateX(-50%) rotate(${angle.toFixed(2)}deg) translateY(-56px) scale(1.1)`
+                                  : `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
                                 transformOrigin: '50% 240px',
-                                transition: 'transform 0.4s cubic-bezier(0.3, 0.8, 0.3, 1)',
+                                transition: `transform ${id === liftingCardId ? '0.2s' : '0.4s'} cubic-bezier(0.3, 0.8, 0.3, 1)`,
                               }}
                             >
                               <motion.div layoutId={`card-${id}`} className="w-full h-full">
@@ -760,7 +784,7 @@ const App: React.FC = () => {
                       </div>
                     </>
                   )}
-                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setRevealedCards([]); setReading(null); setSecretCards([]); pickLockRef.current = false; pendingPickRef.current = null; setState(ReadingState.IDLE); }} className="text-[#cdb682] hover:text-[#fff7e8] transition-colors border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 text-xs md:text-sm uppercase tracking-[0.25em]">다른 질문 하기</button></div>
+                  <div className="text-center mt-12"><button onClick={() => { setQuestion(''); setQuestionCategory(null); setRevealedCards([]); setReading(null); setSecretCards([]); pickLockRef.current = false; pendingPickRef.current = null; setLiftingCardId(null); setState(ReadingState.IDLE); }} className="text-[#cdb682] hover:text-[#fff7e8] transition-colors border-b border-[#d6b36a]/30 hover:border-[#f0d48a] pb-1 text-xs md:text-sm uppercase tracking-[0.25em]">다른 질문 하기</button></div>
                 </div>
              )}
           </div>

@@ -23,9 +23,3 @@ export const getCardRarity = (card: TarotCard): CardRarity => {
   if (typeof card.number === 'string' || card.number === 1) return 'foil';
   return 'glossy';
 };
-
-export const RARITY_LABELS: Record<CardRarity, string> = {
-  galaxy: '메이저 아르카나 · 갤럭시 홀로',
-  foil: '코트 · 에이스 · 홀로포일',
-  glossy: '핍 카드 · 글로시',
-};

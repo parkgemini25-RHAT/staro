@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SavedReading } from '../types';
 
 // 상용 타로 서비스 공통 패턴: 카테고리로 질문 진입장벽 낮추기
@@ -14,7 +14,9 @@ interface LandingScreenProps {
   exampleQuestion: string;
   errorMessage?: string | null;
   savedReadings?: SavedReading[];
+  selectedCategory?: string | null;
   onQuestionChange: (value: string) => void;
+  onSelectCategory?: (label: string) => void;
   onStart: () => void;
   onFillExample: () => void;
   onLoadReading?: (item: SavedReading) => void;
@@ -32,12 +34,24 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   exampleQuestion,
   errorMessage,
   savedReadings = [],
+  selectedCategory,
   onQuestionChange,
+  onSelectCategory,
   onStart,
   onFillExample,
   onLoadReading,
   onDeleteReading,
 }) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Auto-grow: start compact (2 rows), expand with content up to a cap
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 150)}px`;
+  }, [question]);
   return (
     <section className="relative isolate min-h-screen w-full overflow-hidden px-4 py-4 sm:px-8 sm:py-6 lg:px-12">
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl items-start sm:items-center">
@@ -62,62 +76,71 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
               </p>
             </div>
 
-            <div className="mt-6 max-w-xl rounded-[1.4rem] border border-white/12 bg-white/6 p-3 shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-10 sm:rounded-[1.8rem] sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] uppercase tracking-[0.16em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
-                <span>Reading setup</span>
+            {/* 질문 카드 — 설명 블록 없이 입력이 바로 첫 시선에 오도록 슬림화 */}
+            <div className="mt-6 max-w-xl rounded-[1.4rem] border border-white/12 bg-white/6 p-4 shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-8 sm:rounded-[1.8rem] sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-[9px] uppercase tracking-[0.18em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
+                  질문 입력
+                </label>
                 <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">
                   통배열 3장 + 조언 1장
                 </span>
               </div>
-              <p className="mt-3 text-[12px] leading-5 text-[#d8cfeb] sm:text-sm sm:leading-6">
-                먼저 세 장으로 과거 → 현재 → 미래의 흐름을 통으로 읽고,
-                해석을 확인한 뒤 마지막 조언 카드 한 장을 직접 뽑습니다.
-              </p>
-              <div className="mt-4 rounded-[1.1rem] border border-white/10 bg-[#090512]/70 p-3 sm:rounded-[1.4rem] sm:p-4">
-                <label className="block text-[9px] uppercase tracking-[0.18em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
-                  질문 입력
-                </label>
-                <div className="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
-                  {QUESTION_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.label}
-                      onClick={() => onQuestionChange(cat.question)}
-                      className={`rounded-full border px-3 py-1.5 text-[11px] transition sm:text-xs ${question === cat.question ? 'border-[#f0d48a]/60 bg-[#f0d48a]/15 text-[#f6e8bf]' : 'border-white/12 bg-white/5 text-[#cbc2e4] hover:border-[#d6b36a]/40 hover:text-[#efe4bf]'}`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
+                {QUESTION_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.label}
+                    onClick={() => {
+                      onSelectCategory?.(cat.label);
+                      if (!question.trim()) onQuestionChange(cat.question);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-[11px] transition sm:text-xs ${selectedCategory === cat.label ? 'border-[#f0d48a]/60 bg-[#f0d48a]/15 text-[#f6e8bf]' : 'border-white/12 bg-white/5 text-[#cbc2e4] hover:border-[#d6b36a]/40 hover:text-[#efe4bf]'}`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 rounded-[1.1rem] border border-white/10 bg-[#090512]/70 p-3 sm:rounded-[1.4rem] sm:p-4">
                 <textarea
+                  ref={textareaRef}
                   value={question}
                   onChange={(e) => onQuestionChange(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
                   placeholder={exampleQuestion}
-                  rows={4}
-                  className="mt-3 min-h-[108px] w-full resize-none bg-transparent text-[14px] leading-6 text-[#fff8ea] outline-none placeholder:text-[#9f96b8] sm:min-h-[112px] sm:text-base sm:leading-7"
+                  rows={2}
+                  className="min-h-[52px] w-full resize-none bg-transparent text-[14px] leading-6 text-[#fff8ea] outline-none placeholder:text-[#9f96b8] sm:text-base sm:leading-7"
                 />
+                {isFocused && !errorMessage && (
+                  <p className="mt-1.5 text-[11px] leading-4 text-[#cdb682]/75 sm:text-xs animate-fade-in-up">
+                    팁 · 예/아니오보다, 지금 어떤 흐름으로 흘러가는지 묻는 질문이 더 잘 맞아요.
+                  </p>
+                )}
                 {errorMessage && (
-                  <p className="mt-3 rounded-[0.95rem] border border-[#e07a7a]/30 bg-[#e07a7a]/10 px-3 py-2.5 text-[12px] leading-5 text-[#f3c8c8] sm:rounded-2xl sm:px-4 sm:text-sm animate-fade-in-up">
+                  <p className="mt-1.5 text-[12px] leading-5 text-[#f3c8c8] sm:text-sm animate-fade-in-up">
                     {errorMessage}
                   </p>
                 )}
-                <p className="mt-3 rounded-[0.95rem] border border-[#d6b36a]/18 bg-[#f0d48a]/8 px-3 py-3 text-[12px] leading-5 text-[#efe4bf] sm:rounded-2xl sm:px-4 sm:text-sm sm:leading-6">
-                  팁 · 예/아니오보다, 지금 어떤 흐름으로 흘러가는지 묻는 질문이 더 잘 맞아요.
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-                  <button
-                    onClick={onFillExample}
-                    className="rounded-full border border-white/12 bg-white/6 px-4 py-3 text-[14px] text-[#efe7ff] transition hover:bg-white/10 sm:text-sm"
-                  >
-                    예시 질문 넣기
-                  </button>
-                  <button
-                    onClick={onStart}
-                    className="group relative inline-flex min-h-[50px] items-center justify-center overflow-hidden rounded-full border border-[#f0d48a]/40 bg-[#f1d18a] px-6 py-3 text-[15px] font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)] sm:min-h-[52px] sm:text-base"
-                  >
-                    <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.55),transparent)] opacity-0 transition group-hover:translate-x-full group-hover:opacity-100" />
-                    리딩 시작하기
-                  </button>
-                </div>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={onFillExample}
+                  aria-label="랜덤 예시 질문 넣기"
+                  title="랜덤 예시 질문 넣기"
+                  className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6 text-lg text-[#efe7ff] transition hover:border-[#d6b36a]/40 hover:bg-white/10 sm:h-[52px] sm:w-[52px]"
+                >
+                  🎲
+                </button>
+                <button
+                  onClick={onStart}
+                  className={`group relative inline-flex min-h-[50px] flex-1 items-center justify-center overflow-hidden rounded-full border border-[#f0d48a]/40 px-6 py-3 text-[15px] font-semibold text-[#1d1029] shadow-[0_20px_60px_rgba(214,179,106,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(214,179,106,0.35)] sm:min-h-[52px] sm:text-base ${question.trim() ? 'bg-[#f1d18a]' : 'bg-[#f1d18a]/55'}`}
+                >
+                  <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.55),transparent)] opacity-0 transition group-hover:translate-x-full group-hover:opacity-100" />
+                  리딩 시작하기
+                </button>
               </div>
             </div>
 

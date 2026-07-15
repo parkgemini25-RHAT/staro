@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { DrawnCard } from '../types';
-import { getCardImagePath, getCardRarity, RARITY_LABELS } from '../utils/cardAssets';
+import { getCardImagePath, getCardRarity } from '../utils/cardAssets';
 import { getCardMeaning, getCardDetail } from '../constants/cardMeanings';
 
 interface CardDetailModalProps {
@@ -112,9 +112,6 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
                 <div className="pkc__idle-sheen" />
               </div>
             </div>
-            <p className="mt-4 text-center text-[10px] uppercase tracking-[0.3em] text-[#cdb682]/70">
-              {RARITY_LABELS[rarity]}
-            </p>
           </div>
 
           {/* Right: card explanation (instant, from local data) */}
