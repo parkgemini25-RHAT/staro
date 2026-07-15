@@ -141,6 +141,40 @@ const FLOW_PICK_COPY = [
   { title: '카드를 뽑아, 다가올 미래를 열어보세요', sub: '흐름이 향하는 곳을 비추는 세 번째 장입니다' },
 ];
 
+// 포지션별 강조 색상 — 뽑는 단계와 대상 슬롯을 같은 색으로 묶는다
+const PHASE_ACCENTS = [
+  { // 과거 — 보랏빛
+    slot: 'border-[#a78bfa]/60 shadow-[0_0_30px_rgba(167,139,250,0.3)]',
+    label: 'text-[#c4b5fd]',
+    badge: 'border-[#a78bfa]/50 bg-[#a78bfa]/10 text-[#ddd6fe]',
+  },
+  { // 현재 — 금빛
+    slot: 'border-[#f0d48a]/60 shadow-[0_0_30px_rgba(240,212,138,0.32)]',
+    label: 'text-[#f0d48a]',
+    badge: 'border-[#f0d48a]/50 bg-[#f0d48a]/10 text-[#f6e8bf]',
+  },
+  { // 미래 — 새벽빛
+    slot: 'border-[#7dd3fc]/60 shadow-[0_0_30px_rgba(125,211,252,0.3)]',
+    label: 'text-[#a5e3fc]',
+    badge: 'border-[#7dd3fc]/50 bg-[#7dd3fc]/10 text-[#bae6fd]',
+  },
+  { // 조언 — 장밋빛
+    slot: 'border-[#f9a8d4]/60 shadow-[0_0_30px_rgba(249,168,212,0.3)]',
+    label: 'text-[#f9c8dd]',
+    badge: 'border-[#f9a8d4]/50 bg-[#f9a8d4]/10 text-[#fbd3e5]',
+  },
+];
+
+// Deterministic pseudo-random per (card id, salt) — stable across renders
+const srand = (id: number, salt: number) => {
+  const x = Math.sin(id * 127.1 + salt * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+// Riffle shuffle timeline (deck-of-cards technique: cards split apart sideways,
+// then merge back through each other with re-randomized stacking order — twice)
+type ShufflePhase = 'split1' | 'merge1' | 'split2' | 'merge2' | null;
+
 // A revealed card remembers which deck card it came from so Motion's layoutId
 // can morph the fan card into the slot (FLIP / shared layout technique).
 type PickedCard = DrawnCard & { deckId?: number };
@@ -166,7 +200,8 @@ const App: React.FC = () => {
   });
   const [state, setState] = useState<ReadingState>(ReadingState.IDLE);
   const [deckCards, setDeckCards] = useState<number[]>([]);
-  const [isShuffling, setIsShuffling] = useState(false);
+  const [shufflePhase, setShufflePhase] = useState<ShufflePhase>(null);
+  const isShuffling = shufflePhase !== null;
   const [fanWidth, setFanWidth] = useState(0);
 
   // Pick sequencing: lock while a pick is in progress, queue one click made during the lock
@@ -291,7 +326,7 @@ const App: React.FC = () => {
     setReading(null);
     pickLockRef.current = false;
     pendingPickRef.current = null;
-    setIsShuffling(false);
+    setShufflePhase(null);
     setState(ReadingState.DRAWING);
     setDeckCards(Array.from({ length: 78 }, (_, i) => i));
     generateReadingBackground(question, finalCards);
@@ -334,10 +369,13 @@ const App: React.FC = () => {
     };
 
     if (isFirstPick) {
-      // Visible shuffle: the fan gathers into a stack, shakes, then respreads (900ms)
-      setIsShuffling(true);
+      // Riffle shuffle: split → merge (reorder) → split → merge → respread
       playSfx('shuffle');
-      setTimeout(() => { setIsShuffling(false); commitPick(); }, 900);
+      setShufflePhase('split1');
+      setTimeout(() => setShufflePhase('merge1'), 240);
+      setTimeout(() => { setShufflePhase('split2'); playSfx('shuffle'); }, 500);
+      setTimeout(() => setShufflePhase('merge2'), 740);
+      setTimeout(() => { setShufflePhase(null); commitPick(); }, 1020);
     } else {
       commitPick();
     }
@@ -392,9 +430,10 @@ const App: React.FC = () => {
     const keyword = stepLabels[count];
     if (!keyword || count >= MAIN_PHASE_COUNT) return null;
     const copy = selectedReadingType === 'flow' ? FLOW_PICK_COPY[count] : null;
+    const accent = PHASE_ACCENTS[count];
     return (
       <span className="flex flex-col items-center gap-3">
-        <span className="inline-flex items-center gap-2 rounded-full border border-[#d6b36a]/35 bg-white/5 px-4 py-1.5 text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase text-[#f3d98b] backdrop-blur-md">
+        <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase backdrop-blur-md ${accent.badge}`}>
           {count + 1} / {MAIN_PHASE_COUNT} · {keyword}
         </span>
         <span key={count} className="text-[#fff7e8] font-display text-2xl md:text-3xl animate-fade-in-up">
@@ -583,25 +622,55 @@ const App: React.FC = () => {
               {deckCards.map((id, index) => {
                 const n = deckCards.length;
                 const angle = n > 1 ? (index / (n - 1) - 0.5) * FAN_SPREAD_DEG : 0;
+                const stackY = fanHeight * 0.16;
+
+                // Riffle shuffle transforms (deck-of-cards technique):
+                // split — cards scatter left/right into two loose piles;
+                // merge — they slide back through each other with a reshuffled z-order.
+                // Outer transform stays translate-only during shuffle (origin-safe);
+                // per-card tilt rides on the inner element's independent `rotate`.
+                let transform = `translateX(-50%) rotate(${angle.toFixed(2)}deg)`;
+                let innerRotate = '0deg';
+                let zIndex = index;
+                let delayMs = (n - index) * 2;
+                if (shufflePhase) {
+                  const round = shufflePhase === 'split1' || shufflePhase === 'merge1' ? 1 : 2;
+                  const dir = srand(id, round) > 0.5 ? 1 : -1;
+                  if (shufflePhase.startsWith('split')) {
+                    const dist = 40 + srand(id, round + 10) * 110;
+                    const jy = stackY + (srand(id, round + 20) - 0.5) * 36;
+                    transform = `translateX(calc(-50% + ${(dir * dist).toFixed(0)}px)) translateY(${jy.toFixed(0)}px)`;
+                    innerRotate = `${((srand(id, round + 30) - 0.5) * 26).toFixed(1)}deg`;
+                  } else {
+                    // merge: collapse into one stack, z-order re-randomized → cards cross over
+                    transform = `translateX(-50%) translateY(${stackY.toFixed(0)}px)`;
+                    innerRotate = `${((srand(id, round + 40) - 0.5) * 5).toFixed(1)}deg`;
+                    zIndex = Math.floor(srand(id, round + 50) * 500);
+                  }
+                  delayMs = srand(id, round + 60) * 45;
+                }
+
                 return (
                   <div
                     key={id}
                     onClick={() => handleCardPick(id)}
                     className={`fan-card absolute left-1/2 top-0 w-16 h-28 md:w-24 md:h-40 group ${isShuffling ? 'cursor-wait' : 'cursor-pointer'}`}
                     style={{
-                      zIndex: index,
-                      // Shuffle: gather every card into a centered stack, then respread in a wave
-                      transform: isShuffling
-                        ? `translateX(-50%) translateY(${fanHeight * 0.22}px) rotate(${(index % 5 - 2) * 1.6}deg)`
-                        : `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
+                      zIndex,
+                      transform,
                       transformOrigin: `50% ${fanRadius}px`,
-                      transition: 'transform 0.4s cubic-bezier(0.3, 0.8, 0.3, 1)',
-                      transitionDelay: `${(isShuffling ? index : n - index) * 2.5}ms`,
+                      transition: `transform ${shufflePhase ? '0.22s' : '0.4s'} cubic-bezier(0.3, 0.7, 0.4, 1)`,
+                      transitionDelay: `${delayMs.toFixed(0)}ms`,
                     }}
                   >
                     <motion.div layoutId={`card-${id}`} className="w-full h-full">
-                      <div className={`w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-100 group-hover:-translate-y-5 group-hover:scale-[1.05] group-hover:border-[#d6b36a]/80 group-hover:shadow-[0_16px_40px_rgba(214,179,106,0.35)] ${isShuffling ? 'animate-shuffle-shake brightness-90' : ''}`}>
-                        <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover transition-[filter] duration-100 group-hover:brightness-130" draggable={false} />
+                      <div
+                        className="fan-lift w-full h-full"
+                        style={{ rotate: innerRotate, transition: 'rotate 0.22s ease-out' }}
+                      >
+                        <div className="w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-[border-color,box-shadow] duration-200 group-hover:border-[#d6b36a]/80 group-hover:shadow-[0_16px_40px_rgba(214,179,106,0.35)]">
+                          <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover" draggable={false} />
+                        </div>
                       </div>
                     </motion.div>
                   </div>
@@ -620,7 +689,7 @@ const App: React.FC = () => {
                   const card = revealedCards[index];
                   return (
                     <div key={index} className="flex flex-col items-center">
-                       {!card ? <div className={`w-24 h-40 sm:w-32 sm:h-56 md:w-40 md:h-64 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? 'border-[#d6b36a]/50 shadow-[0_0_24px_rgba(214,179,106,0.14)] animate-pulse' : ''}`}><span className="text-[#cdb682]/60 text-xs font-semibold tracking-[0.25em] uppercase">{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={CARD_FLIGHT_MS} onSelect={() => setDetailCard({ card, label: currentReadingConfig.stepLabels[index] })} />}
+                       {!card ? <div className={`w-24 h-40 sm:w-32 sm:h-56 md:w-40 md:h-64 rounded-xl border bg-white/5 backdrop-blur-sm flex items-center justify-center transition-all ${revealedCards.length === index ? `${PHASE_ACCENTS[index].slot} animate-pulse` : 'border-white/10'}`}><span className={`text-xs font-semibold tracking-[0.25em] uppercase ${revealedCards.length === index ? PHASE_ACCENTS[index].label : 'text-[#cdb682]/60'}`}>{currentReadingConfig.stepLabels[index]}</span></div> : <CardDisplay card={card} delay={CARD_FLIGHT_MS} onSelect={() => setDetailCard({ card, label: currentReadingConfig.stepLabels[index] })} />}
                     </div>
                   );
                })}
@@ -660,8 +729,10 @@ const App: React.FC = () => {
                               }}
                             >
                               <motion.div layoutId={`card-${id}`} className="w-full h-full">
-                                <div className="w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-100 group-hover:-translate-y-4 group-hover:scale-[1.05] group-hover:border-[#d6b36a]/80 group-hover:shadow-[0_16px_40px_rgba(214,179,106,0.35)]">
-                                  <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover transition-[filter] duration-100 group-hover:brightness-130" draggable={false} />
+                                <div className="fan-lift w-full h-full">
+                                  <div className="w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-[border-color,box-shadow] duration-200 group-hover:border-[#f9a8d4]/70 group-hover:shadow-[0_16px_40px_rgba(249,168,212,0.3)]">
+                                    <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover" draggable={false} />
+                                  </div>
                                 </div>
                               </motion.div>
                             </div>

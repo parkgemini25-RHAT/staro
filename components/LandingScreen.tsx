@@ -1,6 +1,5 @@
 import React from 'react';
 import { SavedReading } from '../types';
-import { CARD_BACK_PATH } from '../utils/cardAssets';
 
 // 상용 타로 서비스 공통 패턴: 카테고리로 질문 진입장벽 낮추기
 const QUESTION_CATEGORIES = [
@@ -160,68 +159,59 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
 
           <div className="order-2 animate-fade-in-up [animation-delay:160ms] [animation-fill-mode:both] lg:order-2">
             <div className="relative mx-auto max-w-[24rem] sm:max-w-[28rem]">
-              <div className="absolute inset-0 rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] blur-2xl" />
-              <div className="relative overflow-hidden rounded-[1.45rem] border border-white/12 bg-[linear-gradient(180deg,rgba(16,10,29,0.88),rgba(10,6,18,0.92))] p-3.5 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-[2rem] sm:p-6">
-                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#cdb682] sm:text-xs sm:tracking-[0.28em]">
+              {/* 카드 쇼케이스 — 실제 78장 덱의 메이저 아르카나 3장 */}
+              <div className="relative h-[17rem] sm:h-[22rem]">
+                <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d6b36a]/14 blur-3xl sm:h-72 sm:w-72" />
+                {[
+                  { src: '/cards/major-18.png', name: 'The Moon', x: '-72%', rot: -13, z: 1, delay: '0s' },
+                  { src: '/cards/major-19.png', name: 'The Sun', x: '-28%', rot: 12, z: 2, delay: '1.4s' },
+                  { src: '/cards/major-17.png', name: 'The Star', x: '-50%', rot: 0, z: 3, delay: '0.7s' },
+                ].map((c) => (
+                  <div
+                    key={c.name}
+                    className="absolute left-1/2 top-1/2 w-32 sm:w-40"
+                    style={{ transform: `translate(${c.x}, -50%) rotate(${c.rot}deg)`, zIndex: c.z }}
+                  >
+                    <div className="landing-float" style={{ animationDelay: c.delay }}>
+                      <img
+                        src={c.src}
+                        alt={c.name}
+                        draggable={false}
+                        className="w-full rounded-xl border border-[#d6b36a]/40 shadow-[0_24px_60px_rgba(0,0,0,0.55),0_0_40px_rgba(214,179,106,0.12)] transition-transform duration-300 hover:-translate-y-2"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-center text-[10px] uppercase tracking-[0.3em] text-[#cdb682]/75 sm:text-[11px]">
+                78 Original Arcana · 별빛 아래 그려진 오리지널 덱
+              </p>
+
+              {/* 3 + 1 진행 안내 — 리딩 화면의 페이즈 색상과 동일한 언어 */}
+              <div className="mt-5 rounded-[1.4rem] border border-white/12 bg-white/5 p-4 backdrop-blur-xl sm:rounded-[1.8rem] sm:p-5">
+                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
                   <span>스타로 리딩은 이렇게 진행돼요</span>
-                  <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">3 + 1 cards</span>
+                  <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">3 + 1</span>
                 </div>
-
-                <div className="mt-4 rounded-[1.2rem] border border-[#d7b568]/18 bg-[radial-gradient(circle_at_top,rgba(214,179,106,0.18),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-3.5 sm:mt-5 sm:rounded-[1.6rem] sm:p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] tracking-[0.18em] text-[#f0dca4] uppercase sm:text-sm sm:tracking-[0.24em]">
-                        기본 흐름 리딩
-                      </p>
-                      <h2 className="mt-2.5 font-display text-[1.55rem] leading-tight text-[#fff6e6] sm:mt-3 sm:text-3xl">
-                        세 장으로 흐름을 읽고,
-                        <br />
-                        한 장으로 조언을 듣습니다
-                      </h2>
-                    </div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#f0d48a]/30 bg-white/8 text-lg text-[#f0d48a] shadow-[inset_0_0_30px_rgba(240,212,138,0.15)] sm:h-14 sm:w-14 sm:text-2xl">
-                      ✦
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex items-end justify-center gap-1.5 sm:mt-6 sm:gap-3">
-                    {['과거', '현재', '미래'].map((label, index) => (
-                      <div
-                        key={label}
-                        className={`flex-1 rounded-[0.9rem] border px-1.5 py-2.5 text-center sm:rounded-[1.2rem] sm:px-3 sm:py-4 ${index === 1 ? 'border-[#f0d48a]/45 bg-[#f0d48a]/12' : 'border-white/10 bg-white/5'}`}
-                      >
-                        <div className="mx-auto mb-2 h-14 w-full max-w-[3.1rem] overflow-hidden rounded-[0.6rem] border border-[#d6b36a]/25 shadow-[0_6px_16px_rgba(0,0,0,0.4)] sm:mb-3 sm:h-24 sm:max-w-[4.2rem] sm:rounded-xl">
-                          <img src={CARD_BACK_PATH} alt="" className="h-full w-full object-cover" draggable={false} />
-                        </div>
-                        <p className="text-[9px] uppercase tracking-[0.12em] text-[#dccda8] sm:text-xs sm:tracking-[0.24em]">{label}</p>
-                      </div>
-                    ))}
-                    <div className="flex items-center px-0.5 pb-8 text-[#d6b36a]/70 sm:pb-10">+</div>
-                    <div className="flex-1 rounded-[0.9rem] border border-dashed border-[#f0d48a]/40 bg-[#f0d48a]/6 px-1.5 py-2.5 text-center sm:rounded-[1.2rem] sm:px-3 sm:py-4">
-                      <div className="mx-auto mb-2 flex h-14 w-full max-w-[3.1rem] items-center justify-center rounded-[0.6rem] border border-dashed border-[#d6b36a]/35 bg-[#0d0718]/60 sm:mb-3 sm:h-24 sm:max-w-[4.2rem] sm:rounded-xl">
-                        <span className="text-base text-[#f0d48a] sm:text-xl">✦</span>
-                      </div>
-                      <p className="text-[9px] uppercase tracking-[0.12em] text-[#f0dca4] sm:text-xs sm:tracking-[0.24em]">조언</p>
-                    </div>
-                  </div>
+                <div className="mt-3.5 flex items-center gap-1.5 sm:gap-2">
+                  {[
+                    { label: '과거', cls: 'border-[#a78bfa]/45 bg-[#a78bfa]/10 text-[#ddd6fe]' },
+                    { label: '현재', cls: 'border-[#f0d48a]/45 bg-[#f0d48a]/10 text-[#f6e8bf]' },
+                    { label: '미래', cls: 'border-[#7dd3fc]/45 bg-[#7dd3fc]/10 text-[#bae6fd]' },
+                  ].map((step, i) => (
+                    <React.Fragment key={step.label}>
+                      {i > 0 && <span className="text-[#cdb682]/40">→</span>}
+                      <span className={`flex-1 rounded-full border px-2 py-1.5 text-center text-[11px] font-medium sm:text-xs ${step.cls}`}>{step.label}</span>
+                    </React.Fragment>
+                  ))}
+                  <span className="text-[#d6b36a]/70">+</span>
+                  <span className="flex-1 rounded-full border border-dashed border-[#f9a8d4]/45 bg-[#f9a8d4]/10 px-2 py-1.5 text-center text-[11px] font-medium text-[#fbd3e5] sm:text-xs">조언</span>
                 </div>
-
-                <div className="mt-4 grid gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-3">
-                  <div className="rounded-[1rem] border border-white/10 bg-white/5 p-3 sm:rounded-[1.4rem] sm:p-4">
-                    <p className="text-[9px] uppercase tracking-[0.14em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">카드가 알려주는 것</p>
-                    <p className="mt-2 text-[12px] leading-5 text-[#ece3ff] sm:text-sm sm:leading-6">
-                      먼저 세 장이 과거의 배경, 현재의 상태, 다가올 흐름을 통으로 보여줍니다.
-                      해석을 읽고 나면, 마지막 조언 카드 한 장을 직접 뽑아 지금 필요한 행동을 확인해요.
-                    </p>
-                  </div>
-                  <div className="rounded-[1rem] border border-white/10 bg-white/5 p-3 sm:rounded-[1.4rem] sm:p-4">
-                    <p className="text-[9px] uppercase tracking-[0.14em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">이럴 때 잘 맞아요</p>
-                    <p className="mt-2 text-[12px] leading-5 text-[#ece3ff] sm:text-sm sm:leading-6">
-                      연애, 일, 인간관계, 선택 같은 고민에서 하나만 콕 집기보다,
-                      전체 흐름을 먼저 이해하고 싶을 때 잘 맞습니다. 타로를 처음 보는 사람도 보기 쉬워요.
-                    </p>
-                  </div>
-                </div>
+                <p className="mt-3 text-[12px] leading-5 text-[#d8cfeb] sm:text-sm sm:leading-6">
+                  세 장으로 과거 → 현재 → 미래의 흐름을 통으로 읽고,
+                  해석을 확인한 뒤 마지막 조언 카드를 직접 뽑습니다.
+                  뽑은 카드는 클릭하면 빛에 반응하는 상세 보기로 이어져요.
+                </p>
               </div>
             </div>
           </div>

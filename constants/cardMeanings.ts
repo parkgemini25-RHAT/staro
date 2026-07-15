@@ -489,3 +489,18 @@ export const CARD_MEANINGS: Record<string, CardMeaning> = {
 };
 
 export const getCardMeaning = (cardName: string): CardMeaning | null => CARD_MEANINGS[cardName] ?? null;
+
+// 심층 해설 — scripts/generate-card-details.mjs로 일괄 생성해 저장된 로컬 데이터
+import cardDetailsJson from './cardDetails.json';
+
+export interface CardDetail {
+  element: string;
+  detail: string;
+  uprightDetail: string;
+  reversedDetail: string;
+  loveNote: string;
+  workNote: string;
+}
+
+export const getCardDetail = (cardName: string): CardDetail | null =>
+  (cardDetailsJson as Record<string, CardDetail>)[cardName] ?? null;

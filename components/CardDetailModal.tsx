@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { DrawnCard } from '../types';
 import { getCardImagePath, getCardRarity, RARITY_LABELS } from '../utils/cardAssets';
-import { getCardMeaning } from '../constants/cardMeanings';
+import { getCardMeaning, getCardDetail } from '../constants/cardMeanings';
 
 interface CardDetailModalProps {
   card: DrawnCard;
@@ -18,6 +18,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
 
   const rarity = getCardRarity(card);
   const meaning = getCardMeaning(card.name);
+  const detail = getCardDetail(card.name);
   const imageUrl = getCardImagePath(card);
 
   useEffect(() => {
@@ -44,6 +45,11 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
     el.style.setProperty('--rx', `${(cy * -22).toFixed(2)}deg`);
     el.style.setProperty('--ry', `${(cx * 26).toFixed(2)}deg`);
     el.style.setProperty('--pfc', Math.min(1, Math.hypot(cx, cy) * 2).toFixed(3));
+    // background shift + pointer-from-left/top, per the original framework vars
+    el.style.setProperty('--bgx', `${(37 + px * 26).toFixed(2)}%`);
+    el.style.setProperty('--bgy', `${(33 + py * 34).toFixed(2)}%`);
+    el.style.setProperty('--pfl', px.toFixed(3));
+    el.style.setProperty('--pft', py.toFixed(3));
   };
 
   const handlePointerLeave = () => {
@@ -55,6 +61,10 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
     el.style.setProperty('--rx', '0deg');
     el.style.setProperty('--ry', '0deg');
     el.style.setProperty('--pfc', '0');
+    el.style.setProperty('--bgx', '50%');
+    el.style.setProperty('--bgy', '50%');
+    el.style.setProperty('--pfl', '0.5');
+    el.style.setProperty('--pft', '0.5');
   };
 
   return (
@@ -119,7 +129,10 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
             </div>
 
             <h2 className="mt-4 font-display text-3xl md:text-4xl text-[#fff7e8]">{card.name}</h2>
-            <p className="mt-1 text-sm text-[#cdb682]">{card.nameKo}</p>
+            <p className="mt-1 text-sm text-[#cdb682]">
+              {card.nameKo}
+              {detail && <span className="ml-2 text-[#9f96b8]">· {detail.element}</span>}
+            </p>
 
             {meaning ? (
               <>
@@ -131,18 +144,44 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, positionLabel, 
                   ))}
                 </div>
 
-                <p className="mt-5 text-sm leading-6 text-[#c9bfe4]/90">{meaning.symbol}</p>
+                <p className="mt-4 text-sm leading-6 text-[#c9bfe4]/90">{meaning.symbol}</p>
 
-                <div className="mt-5 space-y-3">
+                {detail && (
+                  <div className="mt-4 rounded-[1rem] border border-white/10 bg-white/4 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#cdb682] mb-1.5">심층 해설</p>
+                    <p className="text-sm leading-6 text-[#ece3ff]/92">{detail.detail}</p>
+                  </div>
+                )}
+
+                <div className="mt-4 space-y-3">
                   <div className={`rounded-[1rem] border p-4 transition ${!card.isReversed ? 'border-[#d6b36a]/40 bg-[#f0d48a]/8' : 'border-white/8 bg-white/3 opacity-55'}`}>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f0d48a] mb-1.5">정방향</p>
-                    <p className="text-sm leading-6 text-[#ece3ff]/95">{meaning.upright}</p>
+                    <p className="text-sm leading-6 text-[#ece3ff]/95">
+                      <span className="font-medium text-[#fff7e8]">{meaning.upright}</span>
+                      {detail && <span className="mt-1.5 block text-[#ece3ff]/85">{detail.uprightDetail}</span>}
+                    </p>
                   </div>
                   <div className={`rounded-[1rem] border p-4 transition ${card.isReversed ? 'border-[#d6b36a]/40 bg-[#f0d48a]/8' : 'border-white/8 bg-white/3 opacity-55'}`}>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c9bfe4] mb-1.5">역방향</p>
-                    <p className="text-sm leading-6 text-[#ece3ff]/95">{meaning.reversed}</p>
+                    <p className="text-sm leading-6 text-[#ece3ff]/95">
+                      <span className="font-medium text-[#fff7e8]">{meaning.reversed}</span>
+                      {detail && <span className="mt-1.5 block text-[#ece3ff]/85">{detail.reversedDetail}</span>}
+                    </p>
                   </div>
                 </div>
+
+                {detail && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1rem] border border-[#f9a8d4]/20 bg-[#f9a8d4]/6 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f9c8dd] mb-1.5">연애 · 관계</p>
+                      <p className="text-[13px] leading-5.5 text-[#ece3ff]/90">{detail.loveNote}</p>
+                    </div>
+                    <div className="rounded-[1rem] border border-[#7dd3fc]/20 bg-[#7dd3fc]/6 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a5e3fc] mb-1.5">일 · 재물</p>
+                      <p className="text-[13px] leading-5.5 text-[#ece3ff]/90">{detail.workNote}</p>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <p className="mt-5 text-sm text-[#c9bfe4]/80">이 카드의 상세 정보가 준비 중입니다.</p>
