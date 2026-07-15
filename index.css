@@ -577,6 +577,59 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   3D 주사위 — 랜덤 질문 버튼. 표준 CSS 큐브 기법(preserve-3d + 6면
+   translateZ/rotate, JS가 목표 rotateX/Y에 누적 회전을 더해 굴린다).
+--------------------------------------------------------------------------- */
+.die-scene {
+  width: 26px;
+  height: 26px;
+  perspective: 130px;
+}
+
+.die {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.2, 0.75, 0.3, 1.12);
+  will-change: transform;
+}
+
+.die__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background-color: #fffaf0;
+  border: 1.5px solid #d9b98c;
+  box-shadow: inset 0 0 4px rgba(150, 110, 60, 0.25);
+  --pip: radial-gradient(circle, #4a3226 42%, transparent 46%);
+  background-repeat: no-repeat;
+  background-size: 26% 26%;
+}
+
+.die__face--1 { transform: rotateY(0deg) translateZ(13px);
+  background-image: var(--pip); background-position: center; }
+.die__face--2 { transform: rotateX(90deg) translateZ(13px);
+  background-image: var(--pip), var(--pip);
+  background-position: 20% 20%, 80% 80%; }
+.die__face--3 { transform: rotateY(90deg) translateZ(13px);
+  background-image: var(--pip), var(--pip), var(--pip);
+  background-position: 15% 15%, center, 85% 85%; }
+.die__face--4 { transform: rotateY(-90deg) translateZ(13px);
+  background-image: var(--pip), var(--pip), var(--pip), var(--pip);
+  background-position: 22% 22%, 78% 22%, 22% 78%, 78% 78%; }
+.die__face--5 { transform: rotateX(-90deg) translateZ(13px);
+  background-image: var(--pip), var(--pip), var(--pip), var(--pip), var(--pip);
+  background-position: 18% 18%, 82% 18%, center, 18% 82%, 82% 82%; }
+.die__face--6 { transform: rotateY(180deg) translateZ(13px);
+  background-image: var(--pip), var(--pip), var(--pip), var(--pip), var(--pip), var(--pip);
+  background-position: 25% 16%, 75% 16%, 25% 50%, 75% 50%, 25% 84%, 75% 84%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .die { transition: none; }
+}
+
 /* Landing showcase cards float gently */
 @keyframes landing-float {
   0%, 100% { transform: translateY(0); }

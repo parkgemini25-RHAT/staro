@@ -46,6 +46,23 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   onDeleteReading,
 }) => {
   const { theme } = useTheme();
+  // 3D 주사위: 면별 목표 회전(rotateX/rotateY) + 누적 스핀으로 굴림 연출
+  const DIE_FACE_ROT: Record<number, { x: number; y: number }> = {
+    1: { x: 0, y: 0 }, 2: { x: -90, y: 0 }, 3: { x: 0, y: -90 },
+    4: { x: 0, y: 90 }, 5: { x: 90, y: 0 }, 6: { x: 0, y: 180 },
+  };
+  const [dieRot, setDieRot] = useState({ x: -22, y: 32, turns: 0 });
+  const rollDie = () => {
+    const face = 1 + Math.floor(Math.random() * 6);
+    const target = DIE_FACE_ROT[face];
+    setDieRot(prev => ({
+      x: target.x + 360 * (prev.turns + 1),
+      y: target.y + 360 * (prev.turns + 1),
+      turns: prev.turns + 1,
+    }));
+    // 굴러가는 중간에 질문이 바뀐다
+    setTimeout(onFillExample, 320);
+  };
   const copy = THEME_COPY[theme];
   const deckDir = DECKS[theme].dir;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -133,12 +150,19 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
 
               <div className="mt-4 flex items-center gap-2 sm:gap-3">
                 <button
-                  onClick={onFillExample}
-                  aria-label="랜덤 예시 질문 넣기"
-                  title="랜덤 예시 질문 넣기"
-                  className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-line/12 bg-glass/6 text-lg text-ink transition hover:border-accent/40 hover:bg-glass/10 sm:h-[52px] sm:w-[52px]"
+                  onClick={rollDie}
+                  aria-label="주사위를 굴려 랜덤 질문 넣기"
+                  title="주사위를 굴려 랜덤 질문 넣기"
+                  className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-line/12 bg-glass/6 transition hover:border-accent/40 hover:bg-glass/10 sm:h-[52px] sm:w-[52px]"
                 >
-                  🎲
+                  <span className="die-scene">
+                    <span
+                      className="die block"
+                      style={{ transform: `rotateX(${dieRot.x}deg) rotateY(${dieRot.y}deg)` }}
+                    >
+                      {[1, 2, 3, 4, 5, 6].map(f => <span key={f} className={`die__face die__face--${f}`} />)}
+                    </span>
+                  </span>
                 </button>
                 <button
                   onClick={onStart}
