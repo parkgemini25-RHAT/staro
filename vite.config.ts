@@ -36,8 +36,18 @@ const readingApiDevPlugin = (apiKey: string | undefined): Plugin => ({
           return;
         }
 
-        const result = await tarot.generateReading(apiKey, question, cards, readingTypeLabel);
-        respond(200, result);
+        try {
+          const result = await tarot.generateReading(apiKey, question, cards, readingTypeLabel);
+          respond(200, result);
+        } catch (error: any) {
+          // Dev nicety: fall back to the mock when the free-tier quota runs out (429)
+          if (String(error?.message || error).includes('429') || String(error).includes('RESOURCE_EXHAUSTED')) {
+            console.warn('[api/reading] Gemini quota exceeded — serving MOCK reading (dev only)');
+            respond(200, tarot.generateMockReading(question, cards));
+            return;
+          }
+          throw error;
+        }
       } catch (error: any) {
         const status = typeof error?.statusCode === 'number' ? error.statusCode : 500;
         console.error('[api/reading]', error);

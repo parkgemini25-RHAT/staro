@@ -71,7 +71,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 <span className="text-[2rem] text-[#d6b36a] sm:text-inherit">질문 하나로 흐름을 읽다</span>
               </h1>
               <p className="mt-4 max-w-xl text-[14px] leading-6 text-[#e7def8]/82 sm:mt-6 sm:text-lg sm:leading-7">
-                지금 궁금한 한 가지를 적어보세요. 카드가 현재 흐름과 가까운 미래,
+                지금 궁금한 한 가지를 적어보세요. 가까운 미래,
                 그리고 지금 필요한 조언까지 차분하게 풀어드립니다.
               </p>
             </div>
@@ -83,7 +83,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                   질문 입력
                 </label>
                 <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">
-                  통배열 3장 + 조언 1장
+                  종합 리딩 3장 + 조언 1장
                 </span>
               </div>
 
@@ -115,7 +115,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 />
                 {isFocused && !errorMessage && (
                   <p className="mt-1.5 text-[11px] leading-4 text-[#cdb682]/75 sm:text-xs animate-fade-in-up">
-                    팁 · 예/아니오보다, 지금 어떤 흐름으로 흘러가는지 묻는 질문이 더 잘 맞아요.
+                    팁 · 예/아니오보다, 지금 어떤 상황이고 앞으로 어떻게 될 지 묻는 질문이 더 잘 맞아요.
                   </p>
                 )}
                 {errorMessage && (
@@ -207,13 +207,13 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 ))}
               </div>
               <p className="mt-3 text-center text-[10px] uppercase tracking-[0.3em] text-[#cdb682]/75 sm:text-[11px]">
-                78 Original Arcana · 별빛 아래 그려진 오리지널 덱
+                78개의 별빛을 주제로한 오리지널 덱
               </p>
 
               {/* 3 + 1 진행 안내 — 리딩 화면의 페이즈 색상과 동일한 언어 */}
               <div className="mt-5 rounded-[1.4rem] border border-white/12 bg-white/5 p-4 backdrop-blur-xl sm:rounded-[1.8rem] sm:p-5">
                 <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
-                  <span>스타로 리딩은 이렇게 진행돼요</span>
+                  <span>Staro 리딩은 이렇게 진행돼요</span>
                   <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">3 + 1</span>
                 </div>
                 <div className="mt-3.5 flex items-center gap-1.5 sm:gap-2">
@@ -231,9 +231,9 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                   <span className="flex-1 rounded-full border border-dashed border-[#f9a8d4]/45 bg-[#f9a8d4]/10 px-2 py-1.5 text-center text-[11px] font-medium text-[#fbd3e5] sm:text-xs">조언</span>
                 </div>
                 <p className="mt-3 text-[12px] leading-5 text-[#d8cfeb] sm:text-sm sm:leading-6">
-                  세 장으로 과거 → 현재 → 미래의 흐름을 통으로 읽고,
-                  해석을 확인한 뒤 마지막 조언 카드를 직접 뽑습니다.
-                  뽑은 카드는 클릭하면 빛에 반응하는 상세 보기로 이어져요.
+                  세 장의 카드로 현재 상황부터 원인, 미래의 흐름까지 전체적인 맥락을 종합적으로 읽고,
+                  현재, 주변 환경, 가능성 있는 미래의 흐름을 함께 해석합니다.
+                  결과는 여러분의 현재의 선택과 행동에 따라 달라질 수 있습니다.
                 </p>
               </div>
             </div>

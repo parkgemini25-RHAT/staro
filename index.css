@@ -97,15 +97,16 @@ body {
   z-index: 300 !important;
 }
 
-/* Fast rise with a springy overshoot, softer settle on the way back */
+/* Fast rise with a springy overshoot, softer settle on the way back.
+   `rotate` is a separate property (shuffle jitter) so both can animate together. */
 .fan-lift {
   transform: translateY(0) scale(1);
-  transition: transform 0.45s cubic-bezier(0.22, 1.3, 0.36, 1);
+  transition: transform 0.45s cubic-bezier(0.22, 1.3, 0.36, 1), rotate 0.22s ease-out;
   will-change: transform;
 }
 .fan-card:hover .fan-lift {
-  transform: translateY(-22px) scale(1.07);
-  transition: transform 0.16s cubic-bezier(0.2, 0.9, 0.35, 1.3);
+  transform: translateY(-30px) scale(1.09);
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.35, 1.35), rotate 0.22s ease-out;
 }
 
 /* Hide scrollbar for deck spread */

@@ -355,6 +355,8 @@ const App: React.FC = () => {
     if (!deckCards.includes(deckIndex)) return;
     pickLockRef.current = true;
     const isMainPhase = revealedCards.length < MAIN_PHASE_COUNT;
+    // Reshuffle only when another main-phase pick is coming (the fan stays on screen)
+    const reshuffleAfter = isMainPhase && revealedCards.length < MAIN_PHASE_COUNT - 1;
 
     const commitPick = () => {
       setLiftingCardId(null);
@@ -364,33 +366,27 @@ const App: React.FC = () => {
           ? [...prev, { ...secretCards[prev.length], deckId: deckIndex }]
           : prev
       );
-      // Release the lock after flight + flip settle, then run a queued click.
+      // Release the lock after flight + flip (and the background reshuffle) settle.
       setTimeout(() => {
         pickLockRef.current = false;
         const pending = pendingPickRef.current;
         pendingPickRef.current = null;
         if (pending != null) startPickRef.current(pending);
-      }, CARD_FLIGHT_MS + 250);
+      }, reshuffleAfter ? 1250 : CARD_FLIGHT_MS + 250);
     };
 
-    // The chosen card first slides OUT of the fan, then flies to its slot
-    const liftThenCommit = () => {
-      setLiftingCardId(deckIndex);
-      playSfx('pick');
-      setTimeout(commitPick, 230);
-    };
+    // The chosen card slides OUT of the fan immediately, then flies to its slot.
+    setLiftingCardId(deckIndex);
+    playSfx('pick');
+    setTimeout(commitPick, 230);
 
-    if (isMainPhase) {
-      // Every main-phase pick starts with the riffle: split → merge → split → merge
-      playSfx('shuffle');
-      setShufflePhase('split1');
-      setTimeout(() => setShufflePhase('merge1'), 240);
-      setTimeout(() => { setShufflePhase('split2'); playSfx('shuffle'); }, 500);
-      setTimeout(() => setShufflePhase('merge2'), 740);
-      setTimeout(() => { setShufflePhase(null); liftThenCommit(); }, 1020);
-    } else {
-      // Advice pick from the mini fan: quick lift, no full shuffle
-      liftThenCommit();
+    // The remaining deck riffles separately while the drawn card is on its way.
+    if (reshuffleAfter) {
+      setTimeout(() => { playSfx('shuffle'); setShufflePhase('split1'); }, 300);
+      setTimeout(() => setShufflePhase('merge1'), 540);
+      setTimeout(() => setShufflePhase('split2'), 800);
+      setTimeout(() => setShufflePhase('merge2'), 1040);
+      setTimeout(() => setShufflePhase(null), 1320);
     }
   };
 
@@ -688,7 +684,7 @@ const App: React.FC = () => {
                     <motion.div layoutId={`card-${id}`} className="w-full h-full">
                       <div
                         className="fan-lift w-full h-full"
-                        style={{ rotate: innerRotate, transition: 'rotate 0.22s ease-out' }}
+                        style={{ rotate: innerRotate }}
                       >
                         <div className="w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-[border-color,box-shadow] duration-200 group-hover:border-[#d6b36a]/80 group-hover:shadow-[0_16px_40px_rgba(214,179,106,0.35)]">
                           <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover" draggable={false} />
@@ -749,7 +745,9 @@ const App: React.FC = () => {
                                   ? `translateX(-50%) rotate(${angle.toFixed(2)}deg) translateY(-56px) scale(1.1)`
                                   : `translateX(-50%) rotate(${angle.toFixed(2)}deg)`,
                                 transformOrigin: '50% 240px',
-                                transition: `transform ${id === liftingCardId ? '0.2s' : '0.4s'} cubic-bezier(0.3, 0.8, 0.3, 1)`,
+                                transitionProperty: 'transform',
+                                transitionDuration: id === liftingCardId ? '0.2s' : '0.4s',
+                                transitionTimingFunction: 'cubic-bezier(0.3, 0.8, 0.3, 1)',
                               }}
                             >
                               <motion.div layoutId={`card-${id}`} className="w-full h-full">
