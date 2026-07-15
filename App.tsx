@@ -139,6 +139,34 @@ const PAW_FIELD = Array.from({ length: 14 }).map((_, i) => ({
   emoji: i % 3 === 0 ? '☁️' : '🐾',
 }));
 
+// 복슬복슬한 탕뚱 실루엣 — 긴 털이 눈을 덮고 코와 혀만 보이는 삽살개
+const TangttungDog = () => (
+  <svg width="92" height="66" viewBox="0 0 120 84" fill="none" aria-hidden="true">
+    <circle cx="14" cy="34" r="11" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
+    <circle cx="38" cy="46" r="20" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
+    <circle cx="60" cy="44" r="22" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
+    <circle cx="60" cy="50" r="18" fill="#fdf6ec" />
+    <rect x="34" y="58" width="9" height="18" rx="4.5" fill="#f7ecdc" stroke="#e2c39c" strokeWidth="2" />
+    <rect x="52" y="60" width="9" height="18" rx="4.5" fill="#f7ecdc" stroke="#e2c39c" strokeWidth="2" />
+    <rect x="70" y="58" width="9" height="18" rx="4.5" fill="#f7ecdc" stroke="#e2c39c" strokeWidth="2" />
+    <circle cx="88" cy="34" r="19" fill="#fdf6ec" stroke="#e2c39c" strokeWidth="2" />
+    <ellipse cx="76" cy="26" rx="8" ry="11" fill="#e8d3b4" transform="rotate(-20 76 26)" />
+    <path d="M74 28 q6 -8 14 -6 M80 24 q7 -6 14 -3 M88 22 q8 -3 13 2" stroke="#e2c39c" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+    <circle cx="104" cy="36" r="4.6" fill="#3a2b20" />
+    <path d="M99 44 q3 7 8 5 q1 -5 -3 -8 z" fill="#f29bb0" />
+  </svg>
+);
+
+// 달리는 탕뚱 뒤로 발자국이 순서대로 찍힌다 (26s 주기, CSS와 동기)
+const TRAIL_PAWS = Array.from({ length: 8 }).map((_, i) => {
+  const x = 4 + i * 13; // vw
+  return {
+    left: `${x}vw`,
+    delay: `${(((x + 16) / 130) * 6.76).toFixed(2)}s`,
+    rot: i % 2 ? '-14deg' : '14deg',
+  };
+});
+
 const TangttungBackground = () => (
   <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,214,165,0.5),transparent_36%),radial-gradient(circle_at_18%_22%,rgba(255,236,200,0.55),transparent_30%),linear-gradient(180deg,#fdf3e7_0%,#ffe9d3_45%,#ffdcbf_100%)]" />
@@ -152,6 +180,27 @@ const TangttungBackground = () => (
         style={{ top: paw.top, left: paw.left, fontSize: paw.size, animationDelay: paw.delay }}
       >
         {paw.emoji}
+      </span>
+    ))}
+  </div>
+);
+
+// 시그니처: 주기적으로 화면을 가로질러 달리는 탕뚱 + 발자국 트레일.
+// 콘텐츠 위(z-40)를 달리되 모달·컨트롤 아래에 머문다.
+const TangttungRunner = () => (
+  <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+    <div className="tang-runner">
+      <div className="tang-runner__dog">
+        <TangttungDog />
+      </div>
+    </div>
+    {TRAIL_PAWS.map((paw, i) => (
+      <span
+        key={i}
+        className="paw-trail"
+        style={{ left: paw.left, fontSize: 15, animationDelay: paw.delay, ['--paw-rot' as string]: paw.rot } as React.CSSProperties}
+      >
+        🐾
       </span>
     ))}
   </div>
@@ -453,6 +502,22 @@ const App: React.FC = () => {
 
   const [detailCard, setDetailCard] = useState<{ card: PickedCard; label: string } | null>(null);
 
+  // 얼렁탕뚱 시그니처: 빈 곳을 클릭하면 발도장이 뽁 찍힌다
+  const [pawStamps, setPawStamps] = useState<{ id: number; x: number; y: number; rot: number }[]>([]);
+  useEffect(() => {
+    if (theme !== 'tangttung') return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.closest('button, a, input, textarea, [role="button"], .fan-card, .holo-scene, .pkc, li')) return;
+      const id = Date.now() + Math.random();
+      setPawStamps(prev => [...prev.slice(-7), { id, x: e.clientX, y: e.clientY, rot: (Math.random() - 0.5) * 40 }]);
+      setTimeout(() => setPawStamps(prev => prev.filter(p => p.id !== id)), 1150);
+    };
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => window.removeEventListener('pointerdown', onPointerDown);
+  }, [theme]);
+
   // Deck fan arc geometry, sized to the measured container width
   // chord = 2r·sin(spread/2) must fit the container; height covers the edge drop
   const fanRadius = Math.max(220, Math.min((fanWidth - 80) / 1.64, 520));
@@ -615,6 +680,16 @@ const App: React.FC = () => {
     <MotionConfig reducedMotion="user">
     <div className="min-h-screen relative flex flex-col items-center overflow-x-hidden font-sans">
       {theme === 'starot' ? <AtelierBackground /> : <TangttungBackground />}
+      {theme === 'tangttung' && <TangttungRunner />}
+      {pawStamps.map((p) => (
+        <span
+          key={p.id}
+          className="paw-stamp"
+          style={{ left: p.x - 14, top: p.y - 14, fontSize: 26, ['--paw-rot' as string]: `${p.rot}deg` } as React.CSSProperties}
+        >
+          🐾
+        </span>
+      ))}
       {/* 덱(테마) 스위처 — 리딩 진행 중에는 잠금 */}
       <div className="fixed top-6 right-20 z-[9999] flex items-center gap-1 rounded-full border border-line/15 bg-glass/10 p-1 backdrop-blur-md">
         {(Object.keys(DECKS) as ThemeId[]).map((id) => (
