@@ -383,7 +383,14 @@ const App: React.FC = () => {
     }
     setQuestionError(null);
     playSfx('start');
-    playBgm();
+    if (theme === 'tangttung') {
+      // 마법사 탕뚱 인트로: "카드를 뽑아볼까요? 당신의 빛나는 미래는… 바로!"
+      // 영상이 도는 동안 리딩 프리페치는 아래에서 그대로 시작된다.
+      setIntroPlaying(true);
+      setIntroCaptionIdx(0);
+    } else {
+      playBgm();
+    }
 
     const config = READING_TYPES[selectedReadingType];
     // Fisher-Yates shuffle (unbiased)
@@ -501,6 +508,15 @@ const App: React.FC = () => {
   const isIdle = state === ReadingState.IDLE;
 
   const [detailCard, setDetailCard] = useState<{ card: PickedCard; label: string } | null>(null);
+
+  // 얼렁탕뚱 인트로 영상 (7s) — 대사 자막과 함께 재생 후 카드 팬으로 전환
+  const [introPlaying, setIntroPlaying] = useState(false);
+  const [introCaptionIdx, setIntroCaptionIdx] = useState(0);
+  const INTRO_CAPTIONS = ['카드를 뽑아볼까요?', '당신의 빛나는 미래는… 바로!'];
+  const endIntro = () => {
+    setIntroPlaying(false);
+    playBgm();
+  };
 
   // 얼렁탕뚱 시그니처: 빈 곳을 클릭하면 발도장이 뽁 찍힌다
   const [pawStamps, setPawStamps] = useState<{ id: number; x: number; y: number; rot: number }[]>([]);
@@ -905,6 +921,36 @@ const App: React.FC = () => {
         )}
         {state === ReadingState.ERROR && <div className="text-center p-8 rounded-[1.4rem] mt-12 border border-line/12 bg-glass/5 backdrop-blur-md max-w-md"><p className="text-[#f3c8c8]">별들의 신호를 수신하는데 실패했습니다.</p><button onClick={() => setState(ReadingState.IDLE)} className="mt-4 text-xs uppercase tracking-[0.25em] text-accent-muted hover:text-ink-hi border-b border-accent/30 hover:border-accent-hi pb-1 transition-colors">다시 시도하기</button></div>}
       </div>
+      {introPlaying && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#2a1a10]/85 backdrop-blur-md p-6">
+          <div className="relative w-full max-w-[360px] animate-fade-in-up">
+            <div className="overflow-hidden rounded-[1.6rem] border-2 border-accent/50 bg-black shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
+              <video
+                src="/media/tangttung-intro.mp4"
+                poster="/media/tangttung-intro-poster.jpg"
+                autoPlay
+                playsInline
+                muted={isMuted}
+                onEnded={endIntro}
+                onError={endIntro}
+                onTimeUpdate={(e) => setIntroCaptionIdx((e.target as HTMLVideoElement).currentTime < 3.6 ? 0 : 1)}
+                className="w-full h-auto"
+              />
+            </div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-14 px-4 text-center">
+              <p key={introCaptionIdx} className="font-display text-2xl leading-snug text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] animate-fade-in-up">
+                {INTRO_CAPTIONS[introCaptionIdx]}
+              </p>
+            </div>
+            <button
+              onClick={endIntro}
+              className="absolute -bottom-12 left-1/2 -translate-x-1/2 rounded-full border border-white/30 bg-black/35 px-5 py-2 text-xs tracking-wide text-white/90 backdrop-blur transition hover:bg-black/50"
+            >
+              건너뛰고 카드 뽑기 →
+            </button>
+          </div>
+        </div>
+      )}
       {detailCard && (
         <CardDetailModal
           card={detailCard.card}
