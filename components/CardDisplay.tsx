@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { DrawnCard } from '../types';
+import { getCardImagePath, CARD_BACK_PATH } from '../utils/cardAssets';
 
 interface CardDisplayProps {
   card: DrawnCard & { deckId?: number };
@@ -21,19 +22,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
     advice: '조언 (Advice)'
   };
 
-  const getImagePath = (): string => {
-    if (card.arcana === 'Major') {
-      const majNum = (card.number as number).toString().padStart(2, '0');
-      return `/cards/major-${majNum}.png`;
-    }
-    const suit = (card.suit || '').toLowerCase();
-    const rankNum = typeof card.number === 'number'
-      ? card.number
-      : { Page: 11, Knight: 12, Queen: 13, King: 14 }[card.number as string] || 0;
-    return `/cards/${suit}-${rankNum.toString().padStart(2, '0')}.png`;
-  };
-
-  const imageUrl = getImagePath();
+  const imageUrl = getCardImagePath(card);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = tiltRef.current;
@@ -81,7 +70,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, delay }) => {
 
           {/* Back face (visible during flip-in) */}
           <div className="holo-face holo-back rounded-xl overflow-hidden border border-[#d6b36a]/30 bg-[#0d0718] shadow-2xl">
-            <img src="/cards/back.png" alt="card back" className="w-full h-full object-cover" />
+            <img src={CARD_BACK_PATH} alt="card back" className="w-full h-full object-cover" />
           </div>
 
           {/* Front face */}

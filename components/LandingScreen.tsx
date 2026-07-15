@@ -1,21 +1,34 @@
 import React from 'react';
+import { SavedReading } from '../types';
 
 interface LandingScreenProps {
   question: string;
   exampleQuestion: string;
   errorMessage?: string | null;
+  savedReadings?: SavedReading[];
   onQuestionChange: (value: string) => void;
   onStart: () => void;
   onFillExample: () => void;
+  onLoadReading?: (item: SavedReading) => void;
+  onDeleteReading?: (id: string) => void;
 }
+
+const formatSavedDate = (iso: string): string => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
+};
 
 const LandingScreen: React.FC<LandingScreenProps> = ({
   question,
   exampleQuestion,
   errorMessage,
+  savedReadings = [],
   onQuestionChange,
   onStart,
   onFillExample,
+  onLoadReading,
+  onDeleteReading,
 }) => {
   return (
     <section className="relative isolate min-h-screen w-full overflow-hidden px-4 py-4 sm:px-8 sm:py-6 lg:px-12">
@@ -89,6 +102,41 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                 </div>
               </div>
             </div>
+
+            {savedReadings.length > 0 && (
+              <div className="mt-5 max-w-xl rounded-[1.4rem] border border-white/12 bg-white/6 p-3 backdrop-blur-xl sm:rounded-[1.8rem] sm:p-5">
+                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#cdb682] sm:text-xs sm:tracking-[0.24em]">
+                  <span>지난 리딩</span>
+                  <span className="rounded-full border border-white/12 px-3 py-1 text-[9px] text-[#f6e8bf] sm:text-[10px]">{savedReadings.length}</span>
+                </div>
+                <ul className="mt-3 flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
+                  {savedReadings.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => onLoadReading?.(item)}
+                        className="group flex w-full items-center gap-3 rounded-[1rem] border border-white/10 bg-[#090512]/55 px-3.5 py-3 text-left transition hover:border-[#d6b36a]/45 hover:bg-[#0d0718]/80"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] leading-5 text-[#fff8ea] sm:text-sm">{item.question}</p>
+                          <p className="mt-0.5 text-[10px] tracking-[0.12em] text-[#cdb682]/80 sm:text-[11px]">
+                            {formatSavedDate(item.createdAt)} · {item.cards.slice(0, 2).map(c => c.name).join(', ')} 외 {Math.max(item.cards.length - 2, 0)}장
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[#cdb682]/70 transition group-hover:text-[#f0d48a]">보기</span>
+                        <span
+                          role="button"
+                          aria-label="리딩 삭제"
+                          onClick={(e) => { e.stopPropagation(); onDeleteReading?.(item.id); }}
+                          className="shrink-0 rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-[#9f96b8] transition hover:border-[#e07a7a]/40 hover:text-[#f3c8c8]"
+                        >
+                          ✕
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className="order-2 animate-fade-in-up [animation-delay:160ms] [animation-fill-mode:both] lg:order-2">

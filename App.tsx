@@ -3,6 +3,8 @@ import { motion, MotionConfig } from 'motion/react';
 import { FULL_DECK } from './constants';
 import { DrawnCard, ReadingResponse, ReadingState, SavedReading, ReadingPosition } from './types';
 import { getTarotReading } from './services/readingService';
+import { getCardImagePath, CARD_BACK_PATH } from './utils/cardAssets';
+import { playStartChime, playCardFlick, playShuffleRiffle, setSfxMuted } from './utils/soundFx';
 import CardDisplay from './components/CardDisplay';
 import LandingScreen from './components/LandingScreen';
 
@@ -49,6 +51,7 @@ const READING_TYPES = {
 
 type ReadingTypeKey = keyof typeof READING_TYPES;
 
+// Character-based wrapping so Korean text (no spaces to split on) breaks correctly
 const wrapCanvasText = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -58,32 +61,35 @@ const wrapCanvasText = (
   lineHeight: number,
   maxLines: number = 3
 ) => {
-  const words = text.split(' ');
-  let line = '';
-  let currentY = y;
-  let lines = 0;
+  const lines: string[] = [];
+  let current = '';
 
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
-    const metrics = ctx.measureText(testLine);
-    const testWidth = metrics.width;
-    if (testWidth > maxWidth && n > 0) {
-      ctx.fillText(line.trim(), x, currentY);
-      line = words[n] + ' ';
-      currentY += lineHeight;
-      lines += 1;
-      if (lines >= maxLines - 1) {
-        const remaining = words.slice(n).join(' ');
-        const shortened = remaining.length > 38 ? `${remaining.slice(0, 38)}...` : remaining;
-        ctx.fillText(shortened, x, currentY);
-        return;
-      }
+  for (const ch of text) {
+    if (ctx.measureText(current + ch).width > maxWidth && current) {
+      lines.push(current);
+      current = ch === ' ' ? '' : ch;
+      if (lines.length === maxLines) break;
     } else {
-      line = testLine;
+      current += ch;
     }
   }
-  ctx.fillText(line.trim(), x, currentY);
+  if (lines.length < maxLines) {
+    if (current) lines.push(current);
+  } else {
+    // Truncated: mark the last visible line
+    lines[maxLines - 1] = lines[maxLines - 1].replace(/.{1,2}$/, '…');
+  }
+
+  lines.forEach((line, i) => ctx.fillText(line.trim(), x, y + i * lineHeight));
 };
+
+const loadImage = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 
 // Fixed star field — module-level so positions stay stable across re-renders
 const STAR_FIELD = Array.from({ length: 50 }).map(() => ({
@@ -138,7 +144,17 @@ const App: React.FC = () => {
   const [secretCards, setSecretCards] = useState<DrawnCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<PickedCard[]>([]);
   const [reading, setReading] = useState<ReadingResponse | null>(null);
-  const [savedReadings, setSavedReadings] = useState<SavedReading[]>([]);
+  // Lazy init from localStorage: loading via useEffect would let the
+  // persist effect below wipe the stored history with [] on mount.
+  const [savedReadings, setSavedReadings] = useState<SavedReading[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as SavedReading[]) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [state, setState] = useState<ReadingState>(ReadingState.IDLE);
   const [deckCards, setDeckCards] = useState<number[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
@@ -153,37 +169,22 @@ const App: React.FC = () => {
   // Mute State
   const [isMuted, setIsMuted] = useState(false);
 
-  // Sound Refs
+  // BGM stays a hosted loop; SFX are synthesized locally (utils/soundFx)
   const bgmRef = useRef<HTMLAudioElement | null>(null);
-  const sfxStartRef = useRef<HTMLAudioElement | null>(null);
-  const sfxPickRef = useRef<HTMLAudioElement | null>(null);
-  const sfxShuffleRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize Sound Effects
   useEffect(() => {
     bgmRef.current = new Audio('https://assets.mixkit.co/music/preview/mixkit-stars-in-the-night-172.mp3');
     bgmRef.current.loop = true;
-    bgmRef.current.volume = 0.4; 
-
-    sfxStartRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-fairy-teleport-868.mp3');
-    sfxStartRef.current.volume = 1.0; 
-
-    sfxPickRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-poker-card-flick-2002.mp3');
-    sfxPickRef.current.volume = 1.0;
-
-    sfxShuffleRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-game-card-shuffle-1998.mp3');
-    sfxShuffleRef.current.volume = 1.0;
+    bgmRef.current.volume = 0.4;
 
     return () => {
-      if(bgmRef.current) { bgmRef.current.pause(); bgmRef.current = null; }
+      if (bgmRef.current) { bgmRef.current.pause(); bgmRef.current = null; }
     };
   }, []);
 
   useEffect(() => {
     if (bgmRef.current) bgmRef.current.muted = isMuted;
-    if (sfxStartRef.current) sfxStartRef.current.muted = isMuted;
-    if (sfxPickRef.current) sfxPickRef.current.muted = isMuted;
-    if (sfxShuffleRef.current) sfxShuffleRef.current.muted = isMuted;
+    setSfxMuted(isMuted);
   }, [isMuted]);
 
   const toggleMute = () => {
@@ -191,20 +192,10 @@ const App: React.FC = () => {
   };
 
   const playSfx = (type: 'start' | 'pick' | 'shuffle') => {
-    try {
-        if (isMuted) return;
-        let audio: HTMLAudioElement | null = null;
-        if (type === 'start') audio = sfxStartRef.current;
-        if (type === 'pick') audio = sfxPickRef.current;
-        if (type === 'shuffle') audio = sfxShuffleRef.current;
-
-        if (audio) {
-            audio.currentTime = 0;
-            audio.play().catch(e => console.log("Audio play prevented:", e));
-        }
-    } catch (e) {
-        console.error("SFX Error", e);
-    }
+    if (isMuted) return;
+    if (type === 'start') playStartChime();
+    if (type === 'pick') playCardFlick();
+    if (type === 'shuffle') playShuffleRiffle();
   };
 
   const playBgm = () => {
@@ -221,19 +212,6 @@ const App: React.FC = () => {
       setPlaceholderIndex((prev) => (prev + 1) % EXAMPLE_QUESTIONS.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as SavedReading[];
-      if (Array.isArray(parsed)) {
-        setSavedReadings(parsed);
-      }
-    } catch (error) {
-      console.error('Failed to load saved readings', error);
-    }
   }, []);
 
   useEffect(() => {
@@ -457,55 +435,75 @@ const App: React.FC = () => {
       const questionText = question.length > 32 ? `${question.slice(0, 32)}...` : question;
       ctx.fillText(questionText, canvas.width / 2, 290);
 
-      const cardBoxWidth = 210;
-      const cardBoxHeight = 140;
-      const gap = 20;
-      const startX = (canvas.width - (2 * cardBoxWidth + gap)) / 2;
-      const startY = 360;
+      // Draw the four drawn cards with their real artwork
+      const cardImages = await Promise.all(
+        revealedCards.slice(0, 4).map(card => loadImage(getCardImagePath(card)).catch(() => null))
+      );
+
+      const cardW = 190;
+      const cardH = 316; // ≈ 2:3.33, close to the 1024x1536 source ratio
+      const gap = 36;
+      const rowW = 4 * cardW + 3 * gap;
+      const startX = (canvas.width - rowW) / 2;
+      const startY = 350;
 
       revealedCards.slice(0, 4).forEach((card, index) => {
-        const row = Math.floor(index / 2);
-        const col = index % 2;
-        const x = startX + col * (cardBoxWidth + gap);
-        const y = startY + row * (cardBoxHeight + gap);
+        const x = startX + index * (cardW + gap);
+        const y = startY;
+        const img = cardImages[index];
 
-        ctx.fillStyle = 'rgba(13,7,24,0.6)';
-        ctx.fillRect(x, y, cardBoxWidth, cardBoxHeight);
-        ctx.strokeStyle = 'rgba(214,179,106,0.4)';
-        ctx.strokeRect(x, y, cardBoxWidth, cardBoxHeight);
+        // Rounded frame + clipped art (reversed cards drawn upside down)
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(x, y, cardW, cardH, 14);
+        ctx.clip();
+        if (img) {
+          if (card.isReversed) {
+            ctx.translate(x + cardW / 2, y + cardH / 2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(img, -cardW / 2, -cardH / 2, cardW, cardH);
+          } else {
+            ctx.drawImage(img, x, y, cardW, cardH);
+          }
+        } else {
+          ctx.fillStyle = '#0d0718';
+          ctx.fillRect(x, y, cardW, cardH);
+        }
+        ctx.restore();
 
+        ctx.strokeStyle = 'rgba(214,179,106,0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x, y, cardW, cardH, 14);
+        ctx.stroke();
+
+        // Position label + orientation under each card
+        ctx.textAlign = 'center';
         ctx.fillStyle = '#d6b36a';
-        ctx.font = 'bold 20px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(currentReadingConfig.stepLabels[index] || card.position, x + 16, y + 30);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 24px sans-serif';
-        const cardTitle = card.nameKo.length > 12 ? `${card.nameKo.slice(0, 12)}...` : card.nameKo;
-        ctx.fillText(cardTitle, x + 16, y + 68);
-
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(currentReadingConfig.stepLabels[index] || card.position, x + cardW / 2, y + cardH + 36);
         ctx.fillStyle = card.isReversed ? 'rgba(231,222,248,0.75)' : '#f0d48a';
         ctx.font = '18px sans-serif';
-        ctx.fillText(card.isReversed ? '역방향' : '정방향', x + 16, y + 104);
+        ctx.fillText(`${card.nameKo.length > 10 ? card.nameKo.slice(0, 10) + '…' : card.nameKo} · ${card.isReversed ? '역방향' : '정방향'}`, x + cardW / 2, y + cardH + 64);
       });
 
       ctx.fillStyle = '#f0d48a';
       ctx.font = 'bold 30px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('한 줄 조언', 120, 735);
+      ctx.fillText('한 줄 조언', 120, 830);
 
       ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.font = 'bold 42px sans-serif';
-      wrapCanvasText(ctx, `“${reading.oneLineAdvice}”`, 120, 790, canvas.width - 240, 58);
+      ctx.font = 'bold 38px sans-serif';
+      wrapCanvasText(ctx, `“${reading.oneLineAdvice}”`, 120, 885, canvas.width - 240, 54, 2);
 
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.font = '26px sans-serif';
-      wrapCanvasText(ctx, reading.summary, 120, 980, canvas.width - 240, 42, 5);
+      wrapCanvasText(ctx, reading.summary, 120, 1020, canvas.width - 240, 42, 5);
 
       ctx.fillStyle = 'rgba(255,255,255,0.45)';
       ctx.font = '22px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Generated by Starot', canvas.width / 2, 1260);
+      ctx.fillText('Generated by Starot', canvas.width / 2, 1280);
 
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
@@ -540,9 +538,12 @@ const App: React.FC = () => {
             question={question}
             exampleQuestion={EXAMPLE_QUESTIONS[placeholderIndex]}
             errorMessage={questionError}
+            savedReadings={savedReadings}
             onQuestionChange={(value) => { setQuestion(value); if (questionError) setQuestionError(null); }}
             onStart={handleStart}
             onFillExample={fillQuestionExample}
+            onLoadReading={loadSavedReading}
+            onDeleteReading={deleteSavedReading}
           />
         ) : (
           <>
@@ -578,7 +579,7 @@ const App: React.FC = () => {
                   >
                     <motion.div layoutId={`card-${id}`} className="w-full h-full">
                       <div className={`w-full h-full rounded-lg border border-[#d6b36a]/25 shadow-xl overflow-hidden bg-[#0d0718] transition-all duration-300 group-hover:-translate-y-3 group-hover:border-[#d6b36a]/70 group-hover:shadow-[0_12px_32px_rgba(214,179,106,0.28)] ${isShuffling ? 'animate-shuffle-shake opacity-60 blur-[2px] brightness-75' : ''}`}>
-                        <img src="/cards/back.png" alt="" className="w-full h-full object-cover transition-[filter] duration-300 group-hover:brightness-125" draggable={false} />
+                        <img src={CARD_BACK_PATH} alt="" className="w-full h-full object-cover transition-[filter] duration-300 group-hover:brightness-125" draggable={false} />
                       </div>
                     </motion.div>
                   </div>
