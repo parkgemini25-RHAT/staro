@@ -26,6 +26,10 @@ const cardFileName = (card: TarotCard): string => {
 export const getCardImagePath = (card: TarotCard, theme: ThemeId = DEFAULT_THEME): string =>
   `${DECKS[theme].dir}/${cardFileName(card)}`;
 
+// 갤러리 그리드용 경량 썸네일 (440px, ~50KB) — 상세 보기는 원본을 쓴다
+export const getCardThumbPath = (card: TarotCard, theme: ThemeId = DEFAULT_THEME): string =>
+  `${DECKS[theme].dir}/thumbs/${cardFileName(card)}`;
+
 export const getCardBackPath = (theme: ThemeId = DEFAULT_THEME): string =>
   `${DECKS[theme].dir}/back.jpg`;
 

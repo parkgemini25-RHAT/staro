@@ -13,6 +13,7 @@ export const getTarotReading = async (
     body: JSON.stringify({
       question,
       cards: cards.map((c) => ({
+        name: c.name,
         nameKo: c.nameKo,
         position: c.position,
         isReversed: c.isReversed,

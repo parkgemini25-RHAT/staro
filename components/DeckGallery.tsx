@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { FULL_DECK } from '../constants';
 import { TarotCard } from '../types';
-import { getCardImagePath, DECKS } from '../utils/cardAssets';
+import { getCardThumbPath, getCardImagePath, DECKS } from '../utils/cardAssets';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface DeckGalleryProps {
@@ -92,12 +92,21 @@ const DeckGallery: React.FC<DeckGalleryProps> = ({ onClose, onSelectCard, suspen
               style={{ animationDelay: `${Math.min(i * 18, 400)}ms`, animationFillMode: 'both' }}
             >
               <div className="overflow-hidden rounded-xl border border-accent/25 bg-surface shadow-lg transition duration-200 group-hover:-translate-y-1.5 group-hover:border-accent/60 group-hover:shadow-[0_14px_36px_rgba(214,179,106,0.28)]">
+                {/* 썸네일 총량이 ~4MB라 전부 즉시 로드. lazy는 뷰포트 판정이 깨지는
+                    환경(임베드/백그라운드 탭)에서 한 장도 안 뜨는 문제가 있었다. */}
                 <img
-                  src={getCardImagePath(card, theme)}
+                  src={getCardThumbPath(card, theme)}
                   alt={card.nameKo}
-                  loading="lazy"
                   decoding="async"
                   draggable={false}
+                  onError={(e) => {
+                    // 썸네일이 없으면 원본으로 폴백
+                    const img = e.target as HTMLImageElement;
+                    if (!img.dataset.fallback) {
+                      img.dataset.fallback = '1';
+                      img.src = getCardImagePath(card, theme);
+                    }
+                  }}
                   className="aspect-[2/3] w-full object-cover"
                 />
               </div>

@@ -3,6 +3,8 @@ import { GoogleGenAI, Type, Schema } from '@google/genai';
 // Server-side only. The Gemini API key must never reach the client bundle.
 
 export interface ReadingCardInput {
+  /** 표준 RWS 영문 카드명 — 해석의 기준 (예: "6 of Wands") */
+  name?: string;
   nameKo: string;
   position: string;
   isReversed: boolean;
@@ -73,10 +75,14 @@ export const validateReadingRequest = (body: unknown): { question: string; cards
     if (typeof card.nameKo !== 'string' || card.nameKo.length > 60) {
       throw new ReadingRequestError('invalid card name');
     }
+    if (card.name !== undefined && (typeof card.name !== 'string' || card.name.length > 40)) {
+      throw new ReadingRequestError('invalid card english name');
+    }
     if (typeof card.position !== 'string' || !VALID_POSITIONS.has(card.position)) {
       throw new ReadingRequestError('invalid card position');
     }
     return {
+      name: typeof card.name === 'string' ? card.name : undefined,
       nameKo: card.nameKo,
       position: card.position,
       isReversed: card.isReversed === true,
@@ -135,7 +141,10 @@ export const generateReading = async (
   const ai = new GoogleGenAI({ apiKey });
 
   const cardDescriptions = cards
-    .map((c) => `${c.position.toUpperCase()} Position: ${c.nameKo} (${c.isReversed ? 'Reverse/역방향' : 'Upright/정방향'})`)
+    .map((c) => {
+      const cardLabel = c.name ? `${c.name} (한국어: ${c.nameKo})` : c.nameKo;
+      return `${c.position.toUpperCase()} Position: ${cardLabel} — ${c.isReversed ? 'Reversed/역방향' : 'Upright/정방향'}`;
+    })
     .join('\n');
 
   const prompt = `
@@ -144,7 +153,10 @@ export const generateReading = async (
 
     Reading mode: ${readingTypeLabel}
 
-    The user has drawn the following cards:
+    The user has drawn the following cards.
+    Card names are given as standard Rider-Waite-Smith English names — base your
+    interpretation strictly on the English name; the Korean name in parentheses
+    is only a display label:
     ${cardDescriptions}
 
     Please interpret these cards in Korean based on the question and the reading mode.
