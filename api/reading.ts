@@ -1,4 +1,6 @@
-import { generateReading, validateReadingRequest, ReadingRequestError } from './_lib/tarot';
+// NOTE: .js 확장자 필수 — "type": "module" 프로젝트라 Vercel(Node ESM) 런타임이
+// 확장자 없는 상대 import를 해석하지 못한다 (ERR_MODULE_NOT_FOUND).
+import { generateReading, validateReadingRequest, ReadingRequestError } from './_lib/tarot.js';
 
 // Vercel serverless function: POST /api/reading
 export default async function handler(req: any, res: any) {
