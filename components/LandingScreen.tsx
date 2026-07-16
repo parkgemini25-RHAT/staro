@@ -24,6 +24,7 @@ interface LandingScreenProps {
   onFillExample: () => void;
   onLoadReading?: (item: SavedReading) => void;
   onDeleteReading?: (id: string) => void;
+  onOpenGallery?: () => void;
 }
 
 const formatSavedDate = (iso: string): string => {
@@ -44,6 +45,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
   onFillExample,
   onLoadReading,
   onDeleteReading,
+  onOpenGallery,
 }) => {
   const { theme } = useTheme();
   // 3D 주사위: 면별 목표 회전(rotateX/rotateY) + 누적 스핀으로 굴림 연출
@@ -220,9 +222,12 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                   { file: 'major-19.jpg', name: 'The Sun', x: '-28%', rot: 12, z: 2, delay: '1.4s' },
                   { file: 'major-17.jpg', name: 'The Star', x: '-50%', rot: 0, z: 3, delay: '0.7s' },
                 ].map((c) => (
-                  <div
+                  <button
                     key={c.name}
-                    className="absolute left-1/2 top-1/2 w-32 sm:w-40"
+                    onClick={onOpenGallery}
+                    aria-label="덱 갤러리 열기"
+                    title="덱 갤러리 열기"
+                    className="absolute left-1/2 top-1/2 w-32 cursor-pointer sm:w-40"
                     style={{ transform: `translate(${c.x}, -50%) rotate(${c.rot}deg)`, zIndex: c.z }}
                   >
                     <div className="landing-float" style={{ animationDelay: c.delay }}>
@@ -234,12 +239,15 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
                         className="w-full rounded-xl border border-accent/40 shadow-[0_24px_60px_rgba(0,0,0,0.55),0_0_40px_rgba(214,179,106,0.12)] transition-transform duration-300 hover:-translate-y-2"
                       />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
-              <p className="mt-3 text-center text-[10px] uppercase tracking-[0.3em] text-accent-muted/75 sm:text-[11px]">
-                {copy.deckCaption}
-              </p>
+              <button
+                onClick={onOpenGallery}
+                className="mx-auto mt-3 block text-center text-[10px] uppercase tracking-[0.3em] text-accent-muted/75 transition hover:text-accent-soft sm:text-[11px]"
+              >
+                {copy.deckCaption} · 카드를 눌러 78장 모두 보기 →
+              </button>
 
               {/* 3 + 1 진행 안내 — 리딩 화면의 페이즈 색상과 동일한 언어 */}
               <div className="mt-5 rounded-[1.4rem] border border-line/12 bg-glass/5 p-4 backdrop-blur-xl sm:rounded-[1.8rem] sm:p-5">

@@ -9,6 +9,7 @@ import { THEME_COPY } from './constants/themeCopy';
 import { playStartChime, playCardFlick, playShuffleRiffle, setSfxMuted } from './utils/soundFx';
 import CardDisplay from './components/CardDisplay';
 import CardDetailModal from './components/CardDetailModal';
+import DeckGallery from './components/DeckGallery';
 import LandingScreen from './components/LandingScreen';
 
 // 주사위 랜덤 질문 풀 (플레이스홀더 로테이션에도 사용)
@@ -552,6 +553,7 @@ const App: React.FC = () => {
   const isIdle = state === ReadingState.IDLE;
 
   const [detailCard, setDetailCard] = useState<{ card: PickedCard; label: string } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   // 얼렁탕뚱 인트로 영상 (7s) — 대사 자막과 함께 재생 후 카드 팬으로 전환
   const [introPlaying, setIntroPlaying] = useState(false);
@@ -789,6 +791,7 @@ const App: React.FC = () => {
             onFillExample={fillQuestionExample}
             onLoadReading={loadSavedReading}
             onDeleteReading={deleteSavedReading}
+            onOpenGallery={() => setGalleryOpen(true)}
           />
         ) : (
           <>
@@ -994,6 +997,13 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+      {galleryOpen && (
+        <DeckGallery
+          suspendEsc={!!detailCard}
+          onClose={() => setGalleryOpen(false)}
+          onSelectCard={(card) => setDetailCard({ card: { ...card, isReversed: false, position: 'present' }, label: '덱 갤러리' })}
+        />
       )}
       {detailCard && (
         <CardDetailModal
