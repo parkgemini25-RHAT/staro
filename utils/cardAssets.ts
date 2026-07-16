@@ -15,19 +15,19 @@ const COURT_RANKS: Record<string, number> = { Page: 11, Knight: 12, Queen: 13, K
 
 const cardFileName = (card: TarotCard): string => {
   if (card.arcana === 'Major') {
-    return `major-${(card.number as number).toString().padStart(2, '0')}.png`;
+    return `major-${(card.number as number).toString().padStart(2, '0')}.jpg`;
   }
   const suit = (card.suit || '').toLowerCase();
   const rank = typeof card.number === 'number' ? card.number : COURT_RANKS[card.number as string] || 0;
-  return `${suit}-${rank.toString().padStart(2, '0')}.png`;
+  return `${suit}-${rank.toString().padStart(2, '0')}.jpg`;
 };
 
-// Maps a card to its bundled image (major-00.png, wands-01.png, ...)
+// Maps a card to its bundled image (major-00.jpg, wands-01.jpg, ...)
 export const getCardImagePath = (card: TarotCard, theme: ThemeId = DEFAULT_THEME): string =>
   `${DECKS[theme].dir}/${cardFileName(card)}`;
 
 export const getCardBackPath = (theme: ThemeId = DEFAULT_THEME): string =>
-  `${DECKS[theme].dir}/back.png`;
+  `${DECKS[theme].dir}/back.jpg`;
 
 // Holo rarity tiers (pokemon-cards-css style), mapped to tarot hierarchy:
 // Major Arcana → galaxy (rainbow secret), Court/Ace → foil (regular holo), pips → glossy

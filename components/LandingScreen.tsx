@@ -216,9 +216,9 @@ const LandingScreen: React.FC<LandingScreenProps> = ({
               <div className="relative h-[17rem] sm:h-[22rem]">
                 <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/14 blur-3xl sm:h-72 sm:w-72" />
                 {[
-                  { file: 'major-18.png', name: 'The Moon', x: '-72%', rot: -13, z: 1, delay: '0s' },
-                  { file: 'major-19.png', name: 'The Sun', x: '-28%', rot: 12, z: 2, delay: '1.4s' },
-                  { file: 'major-17.png', name: 'The Star', x: '-50%', rot: 0, z: 3, delay: '0.7s' },
+                  { file: 'major-18.jpg', name: 'The Moon', x: '-72%', rot: -13, z: 1, delay: '0s' },
+                  { file: 'major-19.jpg', name: 'The Sun', x: '-28%', rot: 12, z: 2, delay: '1.4s' },
+                  { file: 'major-17.jpg', name: 'The Star', x: '-50%', rot: 0, z: 3, delay: '0.7s' },
                 ].map((c) => (
                   <div
                     key={c.name}
