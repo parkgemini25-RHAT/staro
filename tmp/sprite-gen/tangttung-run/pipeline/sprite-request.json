@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "kind": "sprite-gen-request",
+  "engine": "component-row",
+  "character": {
+    "id": "tangttung",
+    "description": "",
+    "base_image": "base-source.png"
+  },
+  "cell": {
+    "shape": "rect",
+    "width": 256,
+    "height": 192,
+    "safe_margin_x": 18,
+    "safe_margin_y": 18
+  },
+  "chroma_key": {
+    "name": "cyan",
+    "hex": "#00FFFF",
+    "rgb": [
+      0,
+      255,
+      255
+    ],
+    "selection": "auto",
+    "score": 240.71,
+    "min_subject_distance": 212.99,
+    "background": {
+      "mode": "flat",
+      "hex": "#02F903",
+      "rgb": [
+        2,
+        249,
+        3
+      ],
+      "opaque_border_fraction": 1.0,
+      "border_coverage": 1.0,
+      "enclosed_background_pixels": 39,
+      "enclosed_material_pixels": 0,
+      "subject_pixels": 9975
+    },
+    "candidates": [
+      {
+        "name": "magenta",
+        "hex": "#FF00FF",
+        "score": 213.13,
+        "min_subject_distance": 209.93,
+        "clears_erase_radius": true
+      },
+      {
+        "name": "green",
+        "hex": "#00FF00",
+        "score": 213.29,
+        "min_subject_distance": 205.3,
+        "clears_erase_radius": true
+      },
+      {
+        "name": "cyan",
+        "hex": "#00FFFF",
+        "score": 240.71,
+        "min_subject_distance": 212.99,
+        "clears_erase_radius": true
+      },
+      {
+        "name": "blue",
+        "hex": "#004DFF",
+        "score": 218.96,
+        "min_subject_distance": 191.55,
+        "clears_erase_radius": true
+      }
+    ],
+    "selection_reason": "highest 1st-percentile subject distance among the 4 candidate(s) clearing the 96 erase radius"
+  },
+  "states": {
+    "listen": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "action": "a subtle natural four-pose listening loop while facing screen-right: frame 1 calm alert standing idle, frame 2 one drooping ear perks slightly and the head begins a small upward tilt, frame 3 gentle curious head tilt toward an unheard star sound with all four paws planted, frame 4 returns very close to the frame-1 neutral pose for a seamless loop; restrained motion, stable feet and body proportions"
+    },
+    "deliver": {
+      "frames": 6,
+      "fps": 7,
+      "loop": false,
+      "action": "a clear right-facing six-pose tarot-card delivery gesture with readable start, middle, and end: frames 1-2 Tangttung approaches one small vertical tarot card held gently by its top edge in his mouth, showing only the navy-indigo and antique-gold Tangttung deck back; frames 3-4 he lowers his head and carefully offers the same single card toward the viewer while keeping natural four-legged anatomy; frame 5 releases the card neatly at his front paws; frame 6 lifts his head with a gentle satisfied expression; never show a tarot front, readable text, extra cards, floating cards, hands, clothing, or detached magic"
+    },
+    "run": {
+      "frames": 6,
+      "fps": 9,
+      "loop": true,
+      "action": "experimental natural right-facing quadruped run cycle across six distinct gait phases: clear alternating foreleg and hind-leg reach, compression, airborne transition, and grounded push-off, with exactly four anatomically connected legs in every pose, stable body length and head size, consistent screen-right travel intent, clear paw contact phases, and frame 6 flowing naturally back to frame 1; no static bobbing and no speed effects"
+    }
+  },
+  "style": "plain illustrated animation sprite, warm hand-painted Korean storybook mascot with clean confident linework and restrained soft cel shading, mature recognizable Tangttung rather than chibi or generic dog, readable at small UI size, ivory white and pale gray-beige subject colors preserved, tiny navy-indigo and antique-gold accents only on the optional tarot card prop, no pixel art",
+  "motion_phase_guides": false,
+  "layout": "taxonomy/v1",
+  "fit": {
+    "resample": "lanczos",
+    "align_x": "centroid",
+    "align_y": "bottom"
+  }
+}

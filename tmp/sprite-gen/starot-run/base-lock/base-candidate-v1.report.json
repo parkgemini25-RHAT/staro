@@ -1,0 +1,20 @@
+{
+  "kind": "sprite-gen-image-report",
+  "provider": "codex",
+  "prompt": "Use case: stylized-concept\nAsset type: canonical base idle for a small animated UI sprite atlas\nPrimary request: Create one complete standalone Staro oracle seal, derived from the central celestial emblem in the reference tarot-card back.\nInput image: the supplied Staro card back is an identity and visual-language reference only; do not reproduce the rectangular card, its border, or its full composition.\nSubject: one centered self-contained circular-to-oval oracle seal. Its identity is a large, symmetric eight-point golden star at the center; a restrained ring of small crescent moon phases around it; and elegant Art Nouveau botanical filigree integrated into the same compact emblem. The seal must read as one connected decorative object, not many detached symbols.\nStyle/medium: warm hand-painted tarot illustration with crisp, readable gold linework and slightly tactile ink-and-gouache texture, simplified enough to stay legible when displayed around 96 CSS pixels; not pixel art and not photorealistic.\nComposition/framing: square canvas, one front-facing perfectly centered emblem, fully visible, generous even padding on all sides, stable nearly circular outer silhouette, no crop. Neutral dormant idle appearance with no emitted light.\nColor palette: antique gold, very dark midnight indigo, and a tiny restrained muted violet accent. Never use green within the emblem.\nBackdrop: perfectly flat solid #00FF00 chroma-key background for deterministic removal. The entire background must be exactly one uniform green color with no gradient, texture, stars, shadows, floor, glow, reflection, halo, or lighting variation.\nConstraints: no text, no letters, no numbers, no watermark; no people, characters, animals, dogs, hands, faces, or eyes; no rectangular card, card corners, border frame, plaque, medallion rim, UI panel, scenery, separate particles, detached stars, detached light rays, cast shadow, contact shadow, aura, bloom, or transparent-looking glass. Keep every decorative line attached to the compact seal and maintain clear separation from the green background.\nBase Lock target: exactly one canonical idle pose/state, final proportions and style already correct, clean readable silhouette, full object inside frame, flat chroma-ready background.",
+  "out": "/Users/changyoon.park/Downloads/staro/tmp/sprite-gen/starot-run/base-candidate-v1.png",
+  "raw": "/Users/changyoon.park/Downloads/staro/tmp/sprite-gen/starot-run/base-candidate-v1.png.raw.png",
+  "raw_bytes": 2414183,
+  "elapsed_seconds": 111.208,
+  "model": null,
+  "session_id": "019f69f5-b332-7bb0-a7a2-f0e5406bbe69",
+  "refs": [
+    "/Users/changyoon.park/Downloads/staro/public/decks/starot/back.jpg"
+  ],
+  "transparent": false,
+  "chroma": null,
+  "extra": {
+    "inline_results": 1,
+    "rollout_cleaned": false
+  }
+}

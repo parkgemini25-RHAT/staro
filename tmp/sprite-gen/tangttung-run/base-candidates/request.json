@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "kind": "sprite-gen-request",
+  "engine": "component-row",
+  "character": {
+    "id": "tangttung",
+    "description": "Tangttung, the same large white Sapsaree dog as the locked base: tall sturdy natural quadruped anatomy, long strong legs, ivory-white shaggy softly curly coat, pale gray-beige drooping ears, gray eye shading, gentle dark eyes, very large rounded black nose, substantial muzzle, full feathery tail; no harness, collar, leash, clothes, or accessories"
+  },
+  "cell": {
+    "shape": "rect",
+    "width": 256,
+    "height": 192,
+    "safe_margin_x": 18,
+    "safe_margin_y": 18
+  },
+  "chroma_key": {
+    "name": "green",
+    "hex": "#00FF00",
+    "rgb": [0, 255, 0]
+  },
+  "fit": {
+    "resample": "lanczos",
+    "align_x": "centroid",
+    "align_y": "bottom"
+  },
+  "states": {
+    "listen": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "action": "a subtle natural four-pose listening loop while facing screen-right: frame 1 calm alert standing idle, frame 2 one drooping ear perks slightly and the head begins a small upward tilt, frame 3 gentle curious head tilt toward an unheard star sound with all four paws planted, frame 4 returns very close to the frame-1 neutral pose for a seamless loop; restrained motion, stable feet and body proportions"
+    },
+    "deliver": {
+      "frames": 6,
+      "fps": 7,
+      "loop": false,
+      "action": "a clear right-facing six-pose tarot-card delivery gesture with readable start, middle, and end: frames 1-2 Tangttung approaches one small vertical tarot card held gently by its top edge in his mouth, showing only the navy-indigo and antique-gold Tangttung deck back; frames 3-4 he lowers his head and carefully offers the same single card toward the viewer while keeping natural four-legged anatomy; frame 5 releases the card neatly at his front paws; frame 6 lifts his head with a gentle satisfied expression; never show a tarot front, readable text, extra cards, floating cards, hands, clothing, or detached magic"
+    },
+    "run": {
+      "frames": 6,
+      "fps": 9,
+      "loop": true,
+      "action": "experimental natural right-facing quadruped run cycle across six distinct gait phases: clear alternating foreleg and hind-leg reach, compression, airborne transition, and grounded push-off, with exactly four anatomically connected legs in every pose, stable body length and head size, consistent screen-right travel intent, clear paw contact phases, and frame 6 flowing naturally back to frame 1; no static bobbing and no speed effects"
+    }
+  },
+  "style": "plain illustrated animation sprite, warm hand-painted Korean storybook mascot with clean confident linework and restrained soft cel shading, mature recognizable Tangttung rather than chibi or generic dog, readable at small UI size, ivory white and pale gray-beige subject colors preserved, tiny navy-indigo and antique-gold accents only on the optional tarot card prop, no pixel art"
+}

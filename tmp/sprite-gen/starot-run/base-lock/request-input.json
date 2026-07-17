@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "kind": "sprite-gen-request",
+  "engine": "component-row",
+  "cell": {
+    "shape": "square",
+    "size": 192,
+    "safe_margin": 16
+  },
+  "chroma_key": {
+    "name": "green",
+    "hex": "#00FF00",
+    "rgb": [0, 255, 0]
+  },
+  "states": {
+    "idle": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "action": "a perfectly seamless restrained idle loop: the light contained inside the central eight-point star gently breathes once while the small integrated crescent-moon phases make only tiny symmetric alignment changes; the outer silhouette, scale, position, filigree structure, and green background stay completely stable; frame 4 flows naturally back into frame 1"
+    },
+    "bloom": {
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "action": "a clear non-loop oracle-seal awakening gesture with readable start, middle, and end: frame 1 is the same dormant complete seal; frames 2-4 progressively align the attached gold Art Nouveau filigree and integrated crescent-moon phases inward without detaching anything; frames 5-6 complete and brighten the central eight-point star inside the seal; the last frame is a resolved fully awakened seal, with stable outer silhouette and no particles, rays, aura, scenery, or detached effects"
+    }
+  },
+  "style": "Warm hand-painted tarot oracle emblem, crisp antique-gold linework on midnight-indigo enamel with a restrained muted-violet accent, tactile ink-and-gouache texture, centered front-facing connected circular-to-oval seal, simplified for legibility around 96 CSS pixels, not pixel art, no rectangular card, no card border, no character, no animal, no text, and no detached effects.",
+  "fit": {
+    "resample": "lanczos",
+    "align_x": "bbox-center",
+    "align_y": "center",
+    "pixel_perfect": false
+  }
+}

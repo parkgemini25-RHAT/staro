@@ -11,6 +11,7 @@ import CardDisplay from './components/CardDisplay';
 import CardDetailModal from './components/CardDetailModal';
 import DeckGallery from './components/DeckGallery';
 import LandingScreen from './components/LandingScreen';
+import SpritePlayer from './components/SpritePlayer';
 
 // 주사위 랜덤 질문 풀 (플레이스홀더 로테이션에도 사용)
 const EXAMPLE_QUESTIONS = [
@@ -177,10 +178,6 @@ const PAW_FIELD = Array.from({ length: 14 }).map((_, i) => ({
   emoji: i % 3 === 0 ? '☁️' : '🐾',
 }));
 
-// 달리는 탕뚱 스프라이트 경로 — 이미지 파이프라인이 이 파일을 생성하면 러너가 켜진다.
-// 대체 이모지는 쓰지 않는다: 진짜 탕뚱이 준비되기 전에는 러너 자체를 렌더하지 않는다.
-const TANGTTUNG_RUNNER_SPRITE = '/media/tangttung-runner.png';
-
 // 달리는 탕뚱 뒤로 발자국이 순서대로 찍힌다 (26s 주기, CSS와 동기)
 const TRAIL_PAWS = Array.from({ length: 8 }).map((_, i) => {
   const x = 4 + i * 13; // vw
@@ -211,43 +208,30 @@ const TangttungBackground = () => (
 
 // 시그니처: 주기적으로 화면을 가로질러 달리는 탕뚱 + 발자국 트레일.
 // 콘텐츠 위(z-40)를 달리되 모달·컨트롤 아래에 머문다.
-// 스프라이트 파일이 실제로 존재할 때만 레이어 전체를 렌더한다.
-const TangttungRunner = () => {
-  const [spriteReady, setSpriteReady] = useState(false);
-
-  useEffect(() => {
-    const probe = new Image();
-    probe.onload = () => setSpriteReady(true);
-    probe.src = TANGTTUNG_RUNNER_SPRITE;
-  }, []);
-
-  if (!spriteReady) return null;
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
-      <div className="tang-runner">
-        <div className="tang-runner__dog">
-          <img
-            src={TANGTTUNG_RUNNER_SPRITE}
-            alt=""
-            draggable={false}
-            className="block w-[84px] select-none"
-            style={{ filter: 'drop-shadow(0 6px 10px rgba(90,60,30,0.25))' }}
-          />
-        </div>
-      </div>
-      {TRAIL_PAWS.map((paw, i) => (
-        <span
-          key={i}
-          className="paw-trail"
-          style={{ left: paw.left, fontSize: 15, animationDelay: paw.delay, ['--paw-rot' as string]: paw.rot } as React.CSSProperties}
-        >
-          🐾
-        </span>
-      ))}
+// 시트 좌표와 속도는 sprite-gen manifest에서 읽는다. 카드 이미지 자체는 움직이지 않는다.
+const TangttungRunner = () => (
+  <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+    <div className="tang-runner">
+      <SpritePlayer
+        manifestUrl="/media/sprites/tangttung/manifest.json"
+        state="run"
+        width={112}
+        height={84}
+        className="tang-runner__sprite"
+        decorative
+      />
     </div>
-  );
-};
+    {TRAIL_PAWS.map((paw, i) => (
+      <span
+        key={i}
+        className="paw-trail"
+        style={{ left: paw.left, fontSize: 15, animationDelay: paw.delay, ['--paw-rot' as string]: paw.rot } as React.CSSProperties}
+      >
+        🐾
+      </span>
+    ))}
+  </div>
+);
 
 const STORAGE_KEY = 'starot-reading-history';
 const MAX_SAVED_READINGS = 12;
@@ -891,7 +875,22 @@ const App: React.FC = () => {
                   );
                })}
              </div>
-             {revealedCards.length >= MAIN_PHASE_COUNT && !reading && state !== ReadingState.ERROR && <div className="flex flex-col items-center animate-pulse my-8"><div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-ink/85 font-display text-lg tracking-wide">{copy.waiting}</p></div>}
+             {revealedCards.length >= MAIN_PHASE_COUNT && !reading && state !== ReadingState.ERROR && (
+               <div className="reading-oracle my-8 flex flex-col items-center">
+                 <div className={`reading-oracle__stage reading-oracle__stage--${theme}`}>
+                   <SpritePlayer
+                     manifestUrl={`/media/sprites/${theme}/manifest.json`}
+                     state={theme === 'starot' ? 'idle' : 'listen'}
+                     width={theme === 'starot' ? 96 : 132}
+                     height={theme === 'starot' ? 96 : 99}
+                     decorative
+                   />
+                 </div>
+                 <p className="mt-3 animate-pulse text-center font-display text-lg tracking-wide text-ink/85">
+                   {copy.waiting}
+                 </p>
+               </div>
+             )}
              {showResults && reading && (
                 <div className="w-full max-w-4xl panel-glass backdrop-blur-xl rounded-[2rem] p-6 md:p-10 border border-line/12 shadow-[0_30px_90px_rgba(0,0,0,0.45)] animate-fade-in-up mb-20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent"></div>
@@ -905,6 +904,15 @@ const App: React.FC = () => {
                   {/* 조언 카드 분기: 통배열 3장의 흐름을 읽은 뒤, 마지막 한 장을 추가로 뽑는다 */}
                   {!adviceDrawn ? (
                     <div className="rounded-[1.4rem] border border-accent/25 bg-[radial-gradient(circle_at_top,rgba(214,179,106,0.1),transparent_50%)] p-6 md:p-8 text-center relative overflow-visible">
+                      <div className={`advice-sprite-stage advice-sprite-stage--${theme}`}>
+                        <SpritePlayer
+                          manifestUrl={`/media/sprites/${theme}/manifest.json`}
+                          state={theme === 'starot' ? 'bloom' : 'deliver'}
+                          width={theme === 'starot' ? 104 : 152}
+                          height={theme === 'starot' ? 104 : 114}
+                          decorative
+                        />
+                      </div>
                       <span className="inline-flex items-center gap-2 rounded-full border border-accent/35 bg-glass/5 px-4 py-1.5 text-[10px] md:text-xs font-semibold tracking-[0.3em] uppercase text-accent-soft">
                         마지막 한 장 · 조언
                       </span>
